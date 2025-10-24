@@ -10,9 +10,17 @@ export const initialUsers: User[] = [
   { id: 5, name: 'Eve (Viewer)', email: 'eve@example.com', role: 'Viewer', color: userColors[4], pin: '5555' },
 ];
 
+const tenDaysAgo = new Date();
+tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+const tenDaysFromNow = new Date();
+tenDaysFromNow.setDate(tenDaysFromNow.getDate() + 10);
+
+
 export const initialForms: Form[] = [
-  { id: 1, title: 'Q3 Project Proposal', createdBy: 1, status: 'active' },
-  { id: 2, title: 'Annual Department Review', createdBy: 1, status: 'active' },
+  { id: 1, title: 'Q3 Project Proposal', createdBy: 1, status: 'published', dueDate: tenDaysFromNow.toISOString().split('T')[0] },
+  { id: 2, title: 'Annual Department Review', createdBy: 1, status: 'published', dueDate: tenDaysAgo.toISOString().split('T')[0] },
+  { id: 3, title: 'Employee Onboarding Checklist', createdBy: 1, status: 'draft' },
 ];
 
 const projectProposalQuestions: { [key: string]: Question[] } = {
@@ -49,7 +57,20 @@ const departmentReviewQuestions: { [key: string]: Question[] } = {
         { id: 'rev-eng-2', type: 'multiple-choice', text: 'How would you rate team morale?', options: ['Excellent', 'Good', 'Fair', 'Poor'] },
         { id: 'rev-eng-3', type: 'signature', text: 'Head of Engineering Signature', required: true },
     ],
-}
+};
+
+const onboardingQuestions: { [key: string]: Question[] } = {
+    hr: [
+        { id: 'hr-1', type: 'short-answer', text: 'Employee Full Name', required: true },
+        { id: 'hr-2', type: 'date', text: 'Start Date' },
+        { id: 'hr-3', type: 'signature', text: 'Employee Agreement Signature', required: true },
+    ],
+    it: [
+        { id: 'it-1', type: 'checkboxes', text: 'Hardware to be provided', options: ['Laptop', 'Monitor', 'Keyboard', 'Mouse'] },
+        { id: 'it-2', type: 'multiple-choice', text: 'Access Level Required', options: ['Standard User', 'Developer', 'Admin'] },
+    ]
+};
+
 
 export const initialSections: Section[] = [
   // Sections for Form 1
@@ -61,6 +82,9 @@ export const initialSections: Section[] = [
   { id: 5, formId: 2, title: 'Marketing Department Achievements', assignedTo: 2, order: 1, questions: departmentReviewQuestions.marketing },
   { id: 6, formId: 2, title: 'Sales Department Performance', assignedTo: 3, order: 2, questions: departmentReviewQuestions.sales },
   { id: 7, formId: 2, title: 'Engineering Team Milestones', assignedTo: 4, order: 3, questions: departmentReviewQuestions.engineering },
+  // Sections for Form 3 (Draft)
+  { id: 8, formId: 3, title: 'HR Paperwork', assignedTo: 1, order: 1, questions: onboardingQuestions.hr },
+  { id: 9, formId: 3, title: 'IT Setup', assignedTo: 4, order: 2, questions: onboardingQuestions.it },
 ];
 
 export const initialResponses: Response[] = [
@@ -71,4 +95,7 @@ export const initialResponses: Response[] = [
     {id: 5, sectionId: 5, content: {}, filledBy: 2, status: 'pending'},
     {id: 6, sectionId: 6, content: {}, filledBy: 3, status: 'pending'},
     {id: 7, sectionId: 7, content: {}, filledBy: 4, status: 'pending'},
+    // Responses for Form 3
+    {id: 8, sectionId: 8, content: {}, filledBy: 1, status: 'pending'},
+    {id: 9, sectionId: 9, content: {}, filledBy: 4, status: 'pending'},
 ];

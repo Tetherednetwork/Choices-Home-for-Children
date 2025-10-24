@@ -103,9 +103,9 @@ const App: React.FC = () => {
 
   const handleRestoreForm = (formId: number) => {
     setForms(prevForms => prevForms.map(form =>
-      form.id === formId ? { ...form, status: 'active' } : form
+      form.id === formId ? { ...form, status: 'draft' } : form
     ));
-    addNotification('Form restored.');
+    addNotification('Form restored as a draft.');
   };
 
   const handlePermanentlyDeleteForm = (formId: number) => {

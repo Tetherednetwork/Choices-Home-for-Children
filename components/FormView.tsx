@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Form, Section, Response, User, Question } from '../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { DownloadIcon, ChevronLeftIcon, MailIcon, ClockIcon, CheckCircleIcon } from './icons';
+import { DownloadIcon, ChevronLeftIcon, MailIcon, ClockIcon, CheckCircleIcon, FileUpIcon, FileTextIcon, LinkIcon } from './icons';
 import UserIcon from './UserIcon';
 import SignaturePad from './SignaturePad';
 
@@ -15,7 +15,44 @@ interface FormViewProps {
   allUsers: User[];
   onBack: () => void;
   addNotification: (message: string) => void;
+  isPreview?: boolean;
 }
+
+const StarRating: React.FC<{
+    count?: number;
+    value: number;
+    onChange: (value: number) => void;
+    disabled?: boolean;
+}> = ({ count = 5, value, onChange, disabled }) => {
+    const [hover, setHover] = useState(0);
+    const stars = Array.from({ length: count }, (_, i) => i + 1);
+
+    return (
+        <div className="flex items-center space-x-1">
+            {stars.map(starValue => (
+                <button
+                    key={starValue}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onChange(starValue)}
+                    onMouseEnter={() => !disabled && setHover(starValue)}
+                    onMouseLeave={() => !disabled && setHover(0)}
+                    className={`cursor-pointer transition-colors ${disabled ? 'cursor-not-allowed' : ''}`}
+                    aria-label={`Rate ${starValue} out of ${count}`}
+                >
+                    <svg
+                        className={`w-8 h-8 ${starValue <= (hover || value) ? 'text-amber-400' : 'text-slate-300'}`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                </button>
+            ))}
+        </div>
+    );
+};
+
 
 const SectionContent: React.FC<{
   section: Section;
@@ -25,14 +62,15 @@ const SectionContent: React.FC<{
   allUsers: User[];
   addNotification: (message: string) => void;
   currentUser: User;
-}> = ({ section, response, setResponses, canEdit, allUsers, addNotification, currentUser }) => {
+  isPreview?: boolean;
+}> = ({ section, response, setResponses, canEdit, allUsers, addNotification, currentUser, isPreview }) => {
   const [answers, setAnswers] = useState(response?.content || {});
   
   useEffect(() => {
     setAnswers(response?.content || {});
   }, [response]);
 
-  const handleInputChange = (questionId: string, value: string | string[]) => {
+  const handleInputChange = (questionId: string, value: any) => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
   };
 
@@ -43,6 +81,21 @@ const SectionContent: React.FC<{
       : currentAnswers.filter(item => item !== option);
     setAnswers(prev => ({ ...prev, [questionId]: newAnswers }));
   };
+  
+  const handleFileChange = (questionId: string, file: File | null) => {
+    if (file) {
+        // In a real app, you'd upload the file and store a URL.
+        // Here, we'll store file metadata as we can't store blobs in localStorage easily.
+        handleInputChange(questionId, {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+        });
+    } else {
+        handleInputChange(questionId, null);
+    }
+  };
+
 
   const handleSave = () => {
     if (window.confirm("Are you sure you want to submit? This action is final and will lock this section from further edits.")) {
@@ -57,18 +110,53 @@ const SectionContent: React.FC<{
   
   const isCompleted = response?.status === 'completed';
 
+  if (isPreview) {
+    return (
+        <div className="space-y-6">
+            {section.questions.map(q => (
+                <div key={q.id}>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                        {q.text} {q.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {q.type === 'short-answer' && <input type="text" disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" />}
+                    {q.type === 'paragraph' && <textarea rows={4} disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" />}
+                    {q.type === 'multiple-choice' && q.options && <div className="space-y-2">{q.options.map(o => <label key={o} className="flex items-center"><input type="radio" disabled className="h-4 w-4" /><span className="ml-3 text-sm text-slate-700">{o}</span></label>)}</div>}
+                    {q.type === 'checkboxes' && q.options && <div className="space-y-2">{q.options.map(o => <label key={o} className="flex items-center"><input type="checkbox" disabled className="h-4 w-4 rounded" /><span className="ml-3 text-sm text-slate-700">{o}</span></label>)}</div>}
+                    {q.type === 'signature' && <div className="w-full h-32 border border-dashed border-slate-400 rounded-md bg-slate-50 flex items-center justify-center text-slate-500">Signature Area</div>}
+                    {q.type === 'rating' && <StarRating value={0} onChange={() => {}} disabled={true} />}
+                    {q.type === 'date' && <input type="date" disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" />}
+                    {q.type === 'mobile' && <input type="tel" disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" placeholder="Mobile number input" />}
+                    {q.type === 'email' && <input type="email" disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" placeholder="Email address input" />}
+                    {q.type === 'url' && <input type="url" disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" placeholder="URL input" />}
+                    {q.type === 'file-upload' && <div className="flex items-center gap-2 p-3 bg-slate-100 border border-slate-300 rounded-md cursor-not-allowed"><FileUpIcon className="w-5 h-5 text-slate-500" /> <span className="text-slate-500">File upload area</span></div>}
+                </div>
+            ))}
+        </div>
+    );
+  }
+
   if (!canEdit || isCompleted) {
     if (isCompleted || currentUser.role === 'Viewer' || currentUser.role === 'Admin') {
       return (
         <div className="space-y-4">
           {section.questions.map(q => {
-            const answer = response?.content[q.id] as string | string[] | undefined;
+            const answer = response?.content[q.id];
             return (
               <div key={q.id}>
                 <label className="block text-sm font-medium text-slate-700">{q.text}</label>
                 <div className="mt-1 p-3 bg-slate-100 rounded-md text-sm text-slate-800 min-h-[40px] prose prose-sm max-w-none">
                   {q.type === 'signature' && typeof answer === 'string' && answer.startsWith('data:image') ? (
                      <img src={answer} alt="Signature" className="max-w-xs border rounded-md" />
+                  ) : q.type === 'rating' ? (
+                     answer ? <StarRating value={Number(answer)} onChange={() => {}} disabled={true} /> : <span className="text-slate-400">Not rated</span>
+                  ) : q.type === 'file-upload' && answer && typeof answer === 'object' && answer.name ? (
+                     <div className="flex items-center gap-2 p-2 bg-slate-200 rounded-md max-w-sm">
+                        <FileTextIcon className="w-5 h-5 text-slate-600 flex-shrink-0"/>
+                        <span className="text-sm font-medium text-slate-800 truncate">{answer.name}</span>
+                        <span className="text-xs text-slate-500 ml-auto flex-shrink-0">({(answer.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                  ) : q.type === 'url' && typeof answer === 'string' ? (
+                     <a href={!answer.startsWith('http') ? `https://${answer}`: answer} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline break-all">{answer}</a>
                   ) : Array.isArray(answer) ? 
                     (answer.length > 0 ? <ul>{answer.map(item => <li key={item}>{item}</li>)}</ul> : <span className="text-slate-400">Not answered</span>) : 
                     (answer || <span className="text-slate-400">Not answered</span>)
@@ -156,6 +244,71 @@ const SectionContent: React.FC<{
                 onChange={dataUrl => handleInputChange(q.id, dataUrl)}
             />
           )}
+          {q.type === 'rating' && (
+            <StarRating
+                value={Number(answers[q.id]) || 0}
+                onChange={rating => handleInputChange(q.id, rating)}
+            />
+          )}
+          {q.type === 'date' && (
+              <input
+                  type="date"
+                  id={q.id}
+                  value={(answers[q.id] as string || '')}
+                  onChange={e => handleInputChange(q.id, e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
+              />
+          )}
+          {q.type === 'mobile' && (
+              <input
+                  type="tel"
+                  id={q.id}
+                  value={(answers[q.id] as string || '')}
+                  onChange={e => handleInputChange(q.id, e.target.value)}
+                  placeholder="e.g., 07123 456789"
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
+              />
+          )}
+          {q.type === 'email' && (
+              <input
+                  type="email"
+                  id={q.id}
+                  value={(answers[q.id] as string || '')}
+                  onChange={e => handleInputChange(q.id, e.target.value)}
+                  placeholder="e.g., name@example.com"
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
+              />
+          )}
+          {q.type === 'url' && (
+            <input
+                type="url"
+                id={q.id}
+                value={(answers[q.id] as string || '')}
+                onChange={e => handleInputChange(q.id, e.target.value)}
+                placeholder="https://example.com"
+                className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
+            />
+           )}
+          {q.type === 'file-upload' && (
+            <div className="w-full">
+                <label className="flex items-center px-4 py-2 bg-white text-slate-700 rounded-lg shadow-sm tracking-wide border border-slate-300 cursor-pointer hover:bg-slate-100">
+                    <FileUpIcon className="w-5 h-5 mr-2" />
+                    <span className="text-base leading-normal">
+                        {answers[q.id] && answers[q.id].name ? 'Change file...' : 'Select a file...'}
+                    </span>
+                    <input
+                        type='file'
+                        className="hidden"
+                        onChange={e => handleFileChange(q.id, e.target.files ? e.target.files[0] : null)}
+                    />
+                </label>
+                {answers[q.id] && answers[q.id].name && (
+                    <div className="mt-2 text-sm text-slate-600">
+                        Selected: <span className="font-semibold">{answers[q.id].name}</span>
+                    </div>
+                )}
+            </div>
+          )}
         </div>
       ))}
       <div className="mt-6 flex justify-end items-center gap-4">
@@ -171,7 +324,7 @@ const SectionContent: React.FC<{
   );
 };
 
-const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, setResponses, currentUser, allUsers, onBack, addNotification }) => {
+const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, setResponses, currentUser, allUsers, onBack, addNotification, isPreview }) => {
   const formRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -209,6 +362,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
   const completedCount = formResponses.filter(r => r.status === 'completed').length;
   const progress = sortedSections.length > 0 ? (completedCount / sortedSections.length) * 100 : 0;
   const isComplete = progress === 100;
+  const isOverdue = form.dueDate ? new Date() > new Date(form.dueDate) && !isComplete : false;
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -218,22 +372,24 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-800 backdrop-blur-md bg-white/30 border border-white/40 shadow-sm hover:bg-white/40 hover:shadow-md rounded-xl transition-all duration-300"
         >
           <ChevronLeftIcon className="w-4 h-4"/>
-          Back to Dashboard
+          {isPreview ? 'Close Preview' : 'Back to Dashboard'}
         </button>
         
-        <div className="flex-grow flex items-center justify-center px-4">
-            <div className="w-full max-w-xs">
-                <div className="flex justify-between items-center mb-1 text-sm text-slate-600">
-                    <span>Overall Progress</span>
-                    <span>{Math.round(progress)}%</span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className={`${isComplete ? 'bg-lime-500' : 'bg-sky-800'} h-2 rounded-full transition-all duration-500`} style={{ width: `${progress}%` }}></div>
-                </div>
-            </div>
-        </div>
+        {!isPreview && (
+          <div className="flex-grow flex items-center justify-center px-4">
+              <div className="w-full max-w-xs">
+                  <div className="flex justify-between items-center mb-1 text-sm text-slate-600">
+                      <span>Overall Progress</span>
+                      <span>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className={`${isComplete ? 'bg-lime-500' : 'bg-sky-800'} h-2 rounded-full transition-all duration-500`} style={{ width: `${progress}%` }}></div>
+                  </div>
+              </div>
+          </div>
+        )}
 
-        {(currentUser.role === 'Admin' || currentUser.role === 'Viewer') && (
+        {!isPreview && (currentUser.role === 'Admin' || currentUser.role === 'Viewer') && (
           <button
             onClick={handleExportPDF}
             disabled={isExporting}
@@ -246,31 +402,45 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
       </header>
 
       <div ref={formRef} className="backdrop-blur-xl bg-white/50 p-8 sm:p-12 rounded-2xl shadow-2xl border border-white/60">
-        <h1 className="text-4xl font-bold text-slate-900 border-b pb-4 mb-8">{form.title}</h1>
+        <div className="border-b pb-4 mb-8">
+            <h1 className="text-4xl font-bold text-slate-900">{form.title}</h1>
+            {isPreview && <p className="mt-2 text-sm font-semibold text-sky-700 bg-sky-100 px-3 py-1 rounded-full inline-block">PREVIEW MODE</p>}
+            {form.dueDate && !isPreview && (
+                <p className={`mt-2 text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-slate-500'}`}>
+                    Due by: {new Date(form.dueDate).toLocaleDateString()}
+                </p>
+            )}
+        </div>
         <div className="space-y-12">
           {sortedSections.map(section => {
             const assignedUser = allUsers.find(u => u.id === section.assignedTo);
             const response = allResponses.find(r => r.sectionId === section.id);
             const canEdit = currentUser.role === 'User' && section.assignedTo === currentUser.id && response?.status !== 'completed';
+            const isSectionPending = response?.status === 'pending';
 
             return (
               <div key={section.id} className="border-t pt-8">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-semibold text-slate-800">{section.title}</h2>
                     <div className="flex items-center gap-3">
+                        {!isPreview && isSectionPending && isOverdue && (
+                            <span className="text-xs font-semibold text-white bg-red-500 px-2 py-0.5 rounded-full">
+                                OVERDUE
+                            </span>
+                        )}
                         <span className="text-sm text-slate-500 text-right">
                           Assigned to: {assignedUser?.name || 'Unknown'}
                         </span>
                         <UserIcon name={assignedUser?.name || ''} color={assignedUser?.color || 'bg-slate-400'} className="w-8 h-8" />
                         
-                        {currentUser.role === 'Admin' && currentUser.id !== assignedUser?.id && (
+                        {!isPreview && currentUser.role === 'Admin' && isSectionPending && currentUser.id !== assignedUser?.id && (
                             <button 
-                                onClick={() => alert(`An invitation reminder has been sent to ${assignedUser?.email}.`)}
-                                className="p-1.5 rounded-full hover:bg-slate-200 transition-colors no-print"
-                                aria-label={`Send invite to ${assignedUser?.name}`}
-                                title={`Send invite to ${assignedUser?.name}`}
+                                onClick={() => alert(`A reminder email has been sent to ${assignedUser?.email}.`)}
+                                className={`p-1.5 rounded-full transition-colors no-print ${isOverdue ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-200'}`}
+                                aria-label={`Send reminder to ${assignedUser?.name}`}
+                                title={`Send reminder to ${assignedUser?.name}`}
                             >
-                                <MailIcon className="w-4 h-4 text-slate-600" />
+                                <MailIcon className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-slate-600'}`} />
                             </button>
                         )}
                     </div>
@@ -285,6 +455,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
                     allUsers={allUsers}
                     addNotification={addNotification}
                     currentUser={currentUser}
+                    isPreview={isPreview}
                   />
                 </div>
               </div>

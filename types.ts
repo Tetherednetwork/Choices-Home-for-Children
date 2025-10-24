@@ -9,14 +9,17 @@ export interface User {
   pin?: string;
 }
 
+export type FormStatus = 'draft' | 'published' | 'deleted';
+
 export interface Form {
   id: number;
   title: string;
   createdBy: number; // user id
-  status: 'active' | 'deleted';
+  status: FormStatus;
+  dueDate?: string;
 }
 
-export type QuestionType = 'short-answer' | 'paragraph' | 'multiple-choice' | 'checkboxes' | 'signature';
+export type QuestionType = 'short-answer' | 'paragraph' | 'multiple-choice' | 'checkboxes' | 'signature' | 'rating' | 'date' | 'mobile' | 'email' | 'file-upload' | 'url';
 
 export interface Question {
     id: string;
@@ -38,7 +41,7 @@ export interface Section {
 export interface Response {
   id: number;
   sectionId: number;
-  content: { [questionId: string]: string | string[] }; // e.g., { 'q1': 'Answer text', 'q2': ['Option 1', 'Option 3'], 'q3': 'data:image/png;base64,...' }
+  content: { [questionId: string]: any }; // e.g., { 'q1': 'Answer text', 'q2': ['Option 1', 'Option 3'], 'q3': 'data:image/png;base64,...', 'q4': 4 }
   filledBy: number; // user id
   status: 'pending' | 'completed';
 }
