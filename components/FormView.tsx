@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DownloadIcon, ChevronLeftIcon, MailIcon, ClockIcon, CheckCircleIcon } from './icons';
 import UserIcon from './UserIcon';
+import SignaturePad from './SignaturePad';
 
 interface FormViewProps {
   form: Form;
@@ -31,7 +32,7 @@ const SectionContent: React.FC<{
     setAnswers(response?.content || {});
   }, [response]);
 
-  const handleInputChange = (questionId: string, value: string) => {
+  const handleInputChange = (questionId: string, value: string | string[]) => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
   };
 
@@ -61,12 +62,14 @@ const SectionContent: React.FC<{
       return (
         <div className="space-y-4">
           {section.questions.map(q => {
-            const answer = response?.content[q.id];
+            const answer = response?.content[q.id] as string | string[] | undefined;
             return (
               <div key={q.id}>
                 <label className="block text-sm font-medium text-slate-700">{q.text}</label>
                 <div className="mt-1 p-3 bg-slate-100 rounded-md text-sm text-slate-800 min-h-[40px] prose prose-sm max-w-none">
-                  {Array.isArray(answer) ? 
+                  {q.type === 'signature' && typeof answer === 'string' && answer.startsWith('data:image') ? (
+                     <img src={answer} alt="Signature" className="max-w-xs border rounded-md" />
+                  ) : Array.isArray(answer) ? 
                     (answer.length > 0 ? <ul>{answer.map(item => <li key={item}>{item}</li>)}</ul> : <span className="text-slate-400">Not answered</span>) : 
                     (answer || <span className="text-slate-400">Not answered</span>)
                   }
@@ -147,6 +150,12 @@ const SectionContent: React.FC<{
               ))}
             </div>
           )}
+          {q.type === 'signature' && (
+             <SignaturePad
+                value={answers[q.id] as string || ''}
+                onChange={dataUrl => handleInputChange(q.id, dataUrl)}
+            />
+          )}
         </div>
       ))}
       <div className="mt-6 flex justify-end items-center gap-4">
@@ -173,7 +182,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
       const buttonsToHide = formElement.querySelectorAll('.no-print');
       buttonsToHide.forEach(btn => (btn as HTMLElement).style.display = 'none');
 
-      html2canvas(formElement, { scale: 2 }).then(canvas => {
+      html2canvas(formElement, { scale: 2, allowTaint: true, useCORS: true }).then(canvas => {
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();

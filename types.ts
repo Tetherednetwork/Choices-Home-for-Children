@@ -16,7 +16,7 @@ export interface Form {
   status: 'active' | 'deleted';
 }
 
-export type QuestionType = 'short-answer' | 'paragraph' | 'multiple-choice' | 'checkboxes';
+export type QuestionType = 'short-answer' | 'paragraph' | 'multiple-choice' | 'checkboxes' | 'signature';
 
 export interface Question {
     id: string;
@@ -38,7 +38,7 @@ export interface Section {
 export interface Response {
   id: number;
   sectionId: number;
-  content: { [questionId: string]: string | string[] }; // e.g., { 'q1': 'Answer text', 'q2': ['Option 1', 'Option 3'] }
+  content: { [questionId: string]: string | string[] }; // e.g., { 'q1': 'Answer text', 'q2': ['Option 1', 'Option 3'], 'q3': 'data:image/png;base64,...' }
   filledBy: number; // user id
   status: 'pending' | 'completed';
 }

@@ -47,6 +47,7 @@ const departmentReviewQuestions: { [key: string]: Question[] } = {
     engineering: [
         { id: 'rev-eng-1', type: 'paragraph', text: 'Describe major product releases and technical milestones.' },
         { id: 'rev-eng-2', type: 'multiple-choice', text: 'How would you rate team morale?', options: ['Excellent', 'Good', 'Fair', 'Poor'] },
+        { id: 'rev-eng-3', type: 'signature', text: 'Head of Engineering Signature', required: true },
     ],
 }
 

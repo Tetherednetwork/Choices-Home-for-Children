@@ -301,6 +301,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel })
                                                 <option value="paragraph">Paragraph</option>
                                                 <option value="multiple-choice">Multiple Choice</option>
                                                 <option value="checkboxes">Checkboxes</option>
+                                                <option value="signature">Signature</option>
                                             </select>
                                             <button onClick={() => removeQuestion(section.tempId, q.tempId)} className="p-2 text-slate-400 hover:text-red-500 rounded-full hover:bg-red-50"><TrashIcon className="w-5 h-5"/></button>
                                         </div>
