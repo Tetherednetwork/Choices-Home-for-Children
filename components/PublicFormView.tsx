@@ -60,10 +60,6 @@ const PublicFormView: React.FC<PublicFormViewProps> = ({ form, allSections, allU
 
     return (
         <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-            <header className="text-center my-4">
-                <p className="text-sm font-semibold text-sky-700 bg-sky-100 px-3 py-1 rounded-full inline-block">PUBLIC PREVIEW</p>
-            </header>
-            
             <div className="backdrop-blur-xl bg-white/50 p-8 sm:p-12 rounded-2xl shadow-2xl border border-white/60">
                 <div className="border-b pb-4 mb-8">
                     <h1 className="text-4xl font-bold text-slate-900 text-center">{form.title}</h1>

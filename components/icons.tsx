@@ -45,6 +45,17 @@ export const ChevronLeftIcon: React.FC<{className?: string}> = ({ className }) =
     </svg>
 );
 
+export const ChevronDownIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 24 24" 
+        className={className}
+        fill="none"
+    >
+        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m6 9 6 6 6-6"/>
+    </svg>
+);
+
 export const MailIcon: React.FC<{className?: string}> = ({ className }) => (
     <svg 
         xmlns="http://www.w3.org/2000/svg" 

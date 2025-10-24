@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { User, Form, Section, Response, Notification } from './types';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Form, Section, Response, Notification, DashboardView } from './types';
 import LoginScreen from './components/LoginScreen';
-import Dashboard from './components/Dashboard';
+import Dashboard, { DashboardHandle } from './components/Dashboard';
 import { initialUsers, initialForms, initialSections, initialResponses } from './data/mockData';
 import NotificationContainer from './components/NotificationContainer';
 import Footer from './components/Footer';
 import PublicFormView from './components/PublicFormView';
+import Header from './components/Header';
 
 const userColors = ['bg-sky-600', 'bg-lime-600', 'bg-amber-600', 'bg-violet-600', 'bg-rose-600', 'bg-teal-600'];
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [sharedFormId, setSharedFormId] = useState<string | null>(null);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const dashboardRef = useRef<DashboardHandle>(null);
 
   const [users, setUsers] = useState<User[]>(() => {
     try {
@@ -82,6 +85,14 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setCurrentUser(null);
+  };
+
+  const handleNavigation = (view: DashboardView) => {
+    dashboardRef.current?.setView(view);
+  };
+
+  const handleNewFormClick = () => {
+    setIsTemplateModalOpen(true);
   };
   
   const handleCreateUser = (newUser: Omit<User, 'id' | 'color'>) => {
@@ -200,45 +211,56 @@ const App: React.FC = () => {
   if (sharedFormId) {
     const formToShare = forms.find(f => f.shareId === sharedFormId && f.status === 'published');
 
+    let content;
     if (formToShare) {
-        return (
-            <div className="min-h-screen text-slate-800 flex flex-col">
-                <main className="flex-grow">
-                    <NotificationContainer notifications={notifications} setNotifications={setNotifications} />
-                    <PublicFormView
-                        form={formToShare}
-                        allSections={sections.filter(s => s.formId === formToShare.id)}
-                        allUsers={users}
-                    />
-                </main>
-                <Footer />
-            </div>
+        content = (
+            <PublicFormView
+                form={formToShare}
+                allSections={sections.filter(s => s.formId === formToShare.id)}
+                allUsers={users}
+            />
         );
     } else {
-        return (
-            <div className="min-h-screen flex flex-col">
-                <main className="flex-grow flex items-center justify-center p-4">
-                    <div className="backdrop-blur-xl bg-white/50 p-8 rounded-2xl shadow-2xl border border-white/60 text-center">
-                        <h1 className="text-2xl font-bold text-red-600">Form Not Found</h1>
-                        <p className="text-slate-600 mt-2">The requested form could not be found or is no longer available for sharing.</p>
-                        <a href={window.location.pathname} className="mt-6 inline-block px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-xl shadow-md hover:bg-sky-700 transition-colors">
-                            Go to Homepage
-                        </a>
-                    </div>
-                </main>
-                <Footer />
+        content = (
+             <div className="flex-grow flex items-center justify-center p-4">
+                <div className="backdrop-blur-xl bg-white/50 p-8 rounded-2xl shadow-2xl border border-white/60 text-center">
+                    <h1 className="text-2xl font-bold text-red-600">Form Not Found</h1>
+                    <p className="text-slate-600 mt-2">The requested form could not be found or is no longer available for sharing.</p>
+                    <a href={window.location.pathname} className="mt-6 inline-block px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-xl shadow-md hover:bg-sky-700 transition-colors">
+                        Go to Homepage
+                    </a>
+                </div>
             </div>
         );
     }
+
+    return (
+        <div className="min-h-screen text-slate-800 flex flex-col">
+            <Header currentUser={null} notifications={[]} onLogout={() => {}} onNavigate={() => {}} onNewFormClick={() => {}} />
+            <main className="flex-grow flex flex-col">
+                <NotificationContainer notifications={notifications} setNotifications={setNotifications} />
+                {content}
+            </main>
+            <Footer />
+        </div>
+    );
   }
 
 
   return (
     <div className="min-h-screen text-slate-800 flex flex-col">
+      <Header 
+        currentUser={currentUser} 
+        onLogout={handleLogout} 
+        notifications={notifications}
+        onNavigate={handleNavigation}
+        onNewFormClick={handleNewFormClick}
+      />
       <main className="flex-grow">
         <NotificationContainer notifications={notifications} setNotifications={setNotifications} />
         {currentUser ? (
           <Dashboard 
+            ref={dashboardRef}
             currentUser={currentUser} 
             onLogout={handleLogout} 
             allUsers={users}
@@ -257,6 +279,8 @@ const App: React.FC = () => {
             notifications={notifications}
             onDuplicateDraft={handleDuplicateDraft}
             onSaveAsTemplate={handleSaveAsTemplate}
+            isTemplateModalOpen={isTemplateModalOpen}
+            setIsTemplateModalOpen={setIsTemplateModalOpen}
           />
         ) : (
           <LoginScreen users={users} onLogin={handleLogin} />

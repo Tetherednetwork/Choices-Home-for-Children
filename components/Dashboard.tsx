@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { User, Form, Section, Response, Notification, FormStatus } from '../types';
+import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { User, Form, Section, Response, Notification, FormStatus, DashboardView } from '../types';
 import FormView from './FormView';
-import { LogOutIcon, FileIcon, PlusIcon, UsersIcon, CheckCircleIcon, ArchiveIcon, TrashIcon, BellIcon, EditIcon, EyeIcon, CopyIcon, ClipboardCopyIcon, XIcon, SearchIcon, ShareIcon } from './icons';
+import { PlusIcon, CheckCircleIcon, UsersIcon, ArchiveIcon, BellIcon, EditIcon, EyeIcon, CopyIcon, ClipboardCopyIcon, XIcon, SearchIcon, ShareIcon, TrashIcon, FileIcon, FileTextIcon } from './icons';
 import FormBuilder from './FormBuilder';
 import UserManagement from './UserManagement';
 import ProfileView from './ProfileView';
@@ -27,9 +27,14 @@ interface DashboardProps {
   notifications: Notification[];
   onDuplicateDraft: (formId: number) => void;
   onSaveAsTemplate: (formId: number) => void;
+  isTemplateModalOpen: boolean;
+  setIsTemplateModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-type DashboardView = 'dashboard' | 'formBuilder' | 'userManagement' | 'profile' | 'trash';
+export interface DashboardHandle {
+    setView: (view: DashboardView) => void;
+}
+
 type FormProgressStatus = 'all' | 'completed' | 'inProgress' | 'overdue' | 'notStarted';
 
 const TemplateModal: React.FC<{
@@ -123,22 +128,29 @@ const ShareModal: React.FC<{
 };
 
 
-const Dashboard: React.FC<DashboardProps> = ({ 
+const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({ 
   currentUser, onLogout, allUsers, onCreateUser, onUpdateUser,
   forms, sections, responses, setForms, setSections, setResponses,
   addNotification, onDeleteForm, onRestoreForm, onPermanentlyDeleteForm,
-  notifications, onDuplicateDraft, onSaveAsTemplate
-}) => {
+  notifications, onDuplicateDraft, onSaveAsTemplate, isTemplateModalOpen, setIsTemplateModalOpen
+}, ref) => {
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
-  const [view, setView] = useState<DashboardView>('dashboard');
+  const [view, setView] = useState<DashboardView>('published');
   const [editingForm, setEditingForm] = useState<Form | null>(null);
   const [previewingForm, setPreviewingForm] = useState<Form | null>(null);
-  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [creatorFilter, setCreatorFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<FormProgressStatus>('all');
   const [shareModalData, setShareModalData] = useState<{ formTitle: string; link: string } | null>(null);
 
+  useImperativeHandle(ref, () => ({
+      setView: (newView: DashboardView) => {
+          setSelectedForm(null);
+          setEditingForm(null);
+          setPreviewingForm(null);
+          setView(newView);
+      }
+  }));
   
   const handleSaveForm = (
     formData: { id?: number; title: string; sections: Omit<Section, 'id' | 'formId' | 'order'>[]; dueDate?: string },
@@ -206,7 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
 
     setEditingForm(null);
-    setView('dashboard');
+    setView(status === 'published' ? 'published' : 'drafts');
   };
 
   const handlePublishForm = (formId: number) => {
@@ -252,7 +264,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     return allUsers.filter(u => creatorIds.includes(u.id));
   }, [forms, allUsers]);
 
-  const filteredForms = useMemo(() => {
+  const filteredBaseForms = useMemo(() => {
     return forms.filter(form => {
         if (searchQuery && !form.title.toLowerCase().includes(searchQuery.toLowerCase())) {
             return false;
@@ -261,37 +273,37 @@ const Dashboard: React.FC<DashboardProps> = ({
         if (currentUser.role === 'Admin' && creatorFilter !== 'all' && form.createdBy !== parseInt(creatorFilter)) {
             return false;
         }
-
-        if (statusFilter !== 'all') {
-            if (form.status !== 'published') {
-                return false;
-            }
-            const formSections = sections.filter(s => s.formId === form.id);
-            const formResponses = responses.filter(r => formSections.some(fs => fs.id === r.sectionId));
-            const currentStatus = getFormStatus(form, formSections, formResponses);
-            if (currentStatus !== statusFilter) {
-                return false;
-            }
-        }
         
         return true;
     });
-  }, [forms, searchQuery, creatorFilter, statusFilter, sections, responses, currentUser.role]);
+  }, [forms, searchQuery, creatorFilter, currentUser.role]);
 
-  const draftForms = useMemo(() => filteredForms.filter(f => f.status === 'draft'), [filteredForms]);
-  
-  const formsForCurrentUser = useMemo(() => {
-    const published = filteredForms.filter(f => f.status === 'published');
-    if (currentUser.role === 'Admin' || currentUser.role === 'Viewer') {
-      return published;
+
+  const draftForms = useMemo(() => filteredBaseForms.filter(f => f.status === 'draft'), [filteredBaseForms]);
+  const allTemplates = useMemo(() => filteredBaseForms.filter(f => f.status === 'template'), [filteredBaseForms]);
+
+  const publishedForms = useMemo(() => {
+    let basePublished = filteredBaseForms.filter(f => f.status === 'published');
+
+    if (statusFilter !== 'all') {
+        basePublished = basePublished.filter(form => {
+            const formSections = sections.filter(s => s.formId === form.id);
+            const formResponses = responses.filter(r => formSections.some(fs => fs.id === r.sectionId));
+            const currentStatus = getFormStatus(form, formSections, formResponses);
+            return currentStatus === statusFilter;
+        });
     }
+
+    if (currentUser.role === 'Admin' || currentUser.role === 'Viewer') {
+      return basePublished;
+    }
+
     const userSections = sections.filter(s => s.assignedTo === currentUser.id);
     const formIds = [...new Set(userSections.map(s => s.formId))];
-    return published.filter(f => formIds.includes(f.id));
-  }, [currentUser, filteredForms, sections]);
-  
-  const templates = useMemo(() => forms.filter(f => f.status === 'template'), [forms]);
+    return basePublished.filter(f => formIds.includes(f.id));
 
+  }, [filteredBaseForms, statusFilter, sections, responses, currentUser]);
+  
   const handleStartFromScratch = () => {
     setEditingForm(null);
     setIsTemplateModalOpen(false);
@@ -341,7 +353,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <FormBuilder 
             allUsers={allUsers.filter(u => u.role === 'User' || u.id === currentUser.id)}
             onSave={handleSaveForm}
-            onCancel={() => { setEditingForm(null); setView('dashboard'); }}
+            onCancel={() => { setEditingForm(null); setView('published'); }}
             formToEdit={editingForm}
             sectionsForForm={editingForm ? sections.filter(s => s.formId === (editingForm as any).id) : []}
             responses={responses}
@@ -356,7 +368,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         allUsers={allUsers}
         onCreateUser={onCreateUser}
         onUpdateUser={onUpdateUser}
-        onBack={() => setView('dashboard')}
+        onBack={() => setView('published')}
       />
     );
   }
@@ -366,7 +378,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <ProfileView
             currentUser={currentUser}
             onUpdateUser={onUpdateUser}
-            onBack={() => setView('dashboard')}
+            onBack={() => setView('published')}
           />
       )
   }
@@ -377,18 +389,28 @@ const Dashboard: React.FC<DashboardProps> = ({
         deletedForms={forms.filter(f => f.status === 'deleted')}
         onRestore={onRestoreForm}
         onDeletePermanently={onPermanentlyDeleteForm}
-        onBack={() => setView('dashboard')}
+        onBack={() => setView('published')}
         allUsers={allUsers}
       />
     )
   }
 
+  const viewTitles: Record<DashboardView, string> = {
+    published: `Published Forms (${publishedForms.length})`,
+    drafts: `Drafts (${draftForms.length})`,
+    templates: `Templates (${allTemplates.length})`,
+    trash: 'Trash',
+    formBuilder: 'Form Builder',
+    userManagement: 'User Management',
+    profile: 'My Profile',
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="px-4 sm:px-6 lg:px-8">
       <TemplateModal 
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        templates={templates}
+        templates={allTemplates}
         onSelectTemplate={handleStartFromTemplate}
         onStartFromScratch={handleStartFromScratch}
       />
@@ -397,75 +419,12 @@ const Dashboard: React.FC<DashboardProps> = ({
         onClose={() => setShareModalData(null)}
         data={shareModalData}
       />
-      <header className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-4">
-             <div className="p-2 backdrop-blur-md bg-white/40 border border-white/50 shadow-md rounded-xl flex items-center justify-center">
-              <img 
-                src="https://choiceshomes.co.uk/wp-content/uploads/2019/12/Choices-Logo-Transparent-300x168.png" 
-                alt="Choices Home for Children Logo" 
-                className="h-12"
-              />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">Welcome, {currentUser.name.split(' ')[0]}</h1>
-              <p className="text-slate-600 mt-1">Here are the forms available to you.</p>
-            </div>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-          {currentUser.role === 'Admin' && (
-            <>
-              <button
-                onClick={() => setIsTemplateModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-lime-500/80 border border-lime-500/90 shadow-lg hover:bg-lime-600/80 hover:shadow-xl rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-500/80"
-              >
-                  <PlusIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">New Form</span>
-              </button>
-              <button
-                onClick={() => setView('userManagement')}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-sky-600/80 border border-sky-600/90 shadow-lg hover:bg-sky-700/80 hover:shadow-xl rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500/80"
-              >
-                  <UsersIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Manage Users</span>
-              </button>
-              <button
-                onClick={() => setView('trash')}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-800 backdrop-blur-md bg-white/30 border border-white/40 shadow-sm hover:bg-white/40 hover:shadow-md rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500/80"
-              >
-                  <ArchiveIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Trash</span>
-              </button>
-            </>
-          )}
-          <button
-            className="relative p-2 text-slate-700 backdrop-blur-md bg-white/30 border border-white/40 shadow-sm hover:bg-white/40 hover:shadow-md rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500/80 transition-colors"
-            aria-label={`View notifications (${notifications.length})`}
-            title={`${notifications.length} notifications`}
-          >
-            <BellIcon className="w-5 h-5" />
-            {notifications.length > 0 && (
-              <span className="absolute top-0 right-0 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-            )}
-          </button>
-           <button
-            onClick={() => setView('profile')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-800 backdrop-blur-md bg-white/30 border border-white/40 shadow-sm hover:bg-white/40 hover:shadow-md rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500/80"
-          >
-            <UserIcon name={currentUser.name} color={currentUser.color} className="w-6 h-6" />
-            <span className="hidden sm:inline">My Profile</span>
-          </button>
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-sky-600/80 border border-sky-600/90 shadow-lg hover:bg-sky-700/80 hover:shadow-xl rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500/80"
-          >
-            <LogOutIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
-        </div>
-      </header>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Welcome, {currentUser.name.split(' ')[0]}</h1>
+            <p className="text-slate-600 mt-1">Here are the forms available to you.</p>
+          </div>
+      </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4 mb-8 p-4 backdrop-blur-md bg-white/30 border border-white/40 shadow-sm rounded-xl">
         <div className="relative w-full sm:flex-grow">
@@ -490,152 +449,183 @@ const Dashboard: React.FC<DashboardProps> = ({
                     {uniqueCreators.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
                 </select>
             )}
-            <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as FormProgressStatus)}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-slate-800 bg-white/50 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500/80"
-                aria-label="Filter by status"
-            >
-                <option value="all">All Statuses</option>
-                <option value="completed">Completed</option>
-                <option value="inProgress">In Progress</option>
-                <option value="overdue">Overdue</option>
-                <option value="notStarted">Not Started</option>
-            </select>
+            {view === 'published' && (
+              <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as FormProgressStatus)}
+                  className="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-slate-800 bg-white/50 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500/80"
+                  aria-label="Filter by status"
+              >
+                  <option value="all">All Statuses</option>
+                  <option value="completed">Completed</option>
+                  <option value="inProgress">In Progress</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="notStarted">Not Started</option>
+              </select>
+            )}
         </div>
       </div>
       
       <main className="space-y-12">
-        {currentUser.role === 'Admin' && (
-            <div>
-                <h2 className="text-2xl font-bold text-slate-800 mb-4">Drafts ({draftForms.length})</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {draftForms.map(form => {
-                        const creator = allUsers.find(u => u.id === form.createdBy);
-                        return (
-                            <div key={form.id} className="relative group backdrop-blur-md bg-white/40 p-6 rounded-2xl border border-white/50 shadow-lg flex flex-col justify-between">
-                                <div>
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="p-3 bg-amber-100 rounded-lg">
-                                            <FileIcon className="w-6 h-6 text-amber-700" />
-                                        </div>
-                                        <span className="text-xs font-semibold text-amber-800 bg-amber-200 px-2 py-1 rounded-full">DRAFT</span>
-                                    </div>
-                                    <h3 className="text-xl font-semibold text-slate-800 truncate">{form.title}</h3>
-                                    {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
-                                </div>
-                                <div className="mt-6 flex justify-end gap-2 border-t pt-4">
-                                    <button onClick={() => onDeleteForm(form.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Move to Trash"><TrashIcon className="w-5 h-5"/></button>
-                                    <button onClick={(e) => { e.stopPropagation(); onDuplicateDraft(form.id); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Duplicate Draft"><CopyIcon className="w-5 h-5"/></button>
-                                    <button onClick={(e) => { e.stopPropagation(); setPreviewingForm(form); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Preview Form"><EyeIcon className="w-5 h-5"/></button>
-                                    <button onClick={() => { setEditingForm(form); setView('formBuilder'); }} className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors" title="Edit Form"><EditIcon className="w-5 h-5"/></button>
-                                    <button onClick={() => handlePublishForm(form.id)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-lime-500/80 border border-lime-500/90 shadow-lg hover:bg-lime-600/80 rounded-xl transition-all" title="Publish Form">
-                                        <CheckCircleIcon className="w-4 h-4"/> Publish
-                                    </button>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
-        )}
-        
         <div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">Published Forms ({formsForCurrentUser.length})</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {formsForCurrentUser.map(form => {
-                    const formSections = sections.filter(s => s.formId === form.id);
-                    const formResponses = responses.filter(r => formSections.some(fs => fs.id === r.sectionId));
-                    const creator = allUsers.find(u => u.id === form.createdBy);
-                    
-                    const completedCount = formResponses.filter(r => r.status === 'completed').length;
-                    const progress = formSections.length > 0 ? (completedCount / formSections.length) * 100 : 0;
-                    const isComplete = progress === 100;
-                    
-                    return (
-                    <div
-                        key={form.id}
-                        onClick={() => setSelectedForm(form)}
-                        className="relative group backdrop-blur-md bg-white/40 p-6 rounded-2xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-                    >
-                        {currentUser.role === 'Admin' && (
-                             <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleShareForm(form.id); }}
-                                    className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-sky-700 hover:bg-sky-500/30 transition-all"
-                                    title="Share Form"
-                                >
-                                    <ShareIcon className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onSaveAsTemplate(form.id); }}
-                                    className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-lime-700 hover:bg-lime-500/30 transition-all"
-                                    title="Save as Template"
-                                >
-                                    <ClipboardCopyIcon className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPreviewingForm(form);
-                                    }}
-                                    className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-sky-700 hover:bg-sky-500/30 transition-all"
-                                    title="Preview Form"
-                                >
-                                    <EyeIcon className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingForm(form);
-                                        setView('formBuilder');
-                                    }}
-                                    className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-slate-700 hover:bg-slate-500/30 transition-all"
-                                    title="Edit Form"
-                                >
-                                    <EditIcon className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteForm(form.id);
-                                    }}
-                                    className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-red-700 hover:bg-red-500/30 transition-all"
-                                    title="Move to Trash"
-                                >
-                                    <TrashIcon className="w-5 h-5" />
-                                </button>
-                            </div>
-                        )}
-                        <div>
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="p-3 bg-sky-100 rounded-lg">
-                                <FileIcon className="w-6 h-6 text-sky-700" />
-                            </div>
-                            {isComplete && <span title="Form Completed"><CheckCircleIcon className="w-6 h-6 text-lime-500" /></span>}
-                        </div>
-                        <h3 className="text-xl font-semibold text-slate-800 truncate">{form.title}</h3>
-                        {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
-                        </div>
-                        
-                        <div className="mt-4">
-                        <div className="flex justify-between items-center mb-1 text-sm text-slate-600">
-                            <span>Progress</span>
-                            <span>{Math.round(progress)}%</span>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2.5">
-                            <div className={`${isComplete ? 'bg-lime-500' : 'bg-sky-800'} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${progress}%` }}></div>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-2">{completedCount} of {formSections.length} sections completed</p>
-                        </div>
-                    </div>
-                    );
-                })}
-            </div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">{viewTitles[view]}</h2>
+            
+            {view === 'published' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {publishedForms.map(form => {
+                      const formSections = sections.filter(s => s.formId === form.id);
+                      const formResponses = responses.filter(r => formSections.some(fs => fs.id === r.sectionId));
+                      const creator = allUsers.find(u => u.id === form.createdBy);
+                      
+                      const completedCount = formResponses.filter(r => r.status === 'completed').length;
+                      const progress = formSections.length > 0 ? (completedCount / formSections.length) * 100 : 0;
+                      const isComplete = progress === 100;
+                      
+                      return (
+                      <div
+                          key={form.id}
+                          onClick={() => setSelectedForm(form)}
+                          className="relative group backdrop-blur-md bg-white/40 p-6 rounded-2xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+                      >
+                          {currentUser.role === 'Admin' && (
+                               <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                      onClick={(e) => { e.stopPropagation(); handleShareForm(form.id); }}
+                                      className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-sky-700 hover:bg-sky-500/30 transition-all"
+                                      title="Share Form"
+                                  >
+                                      <ShareIcon className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                      onClick={(e) => { e.stopPropagation(); onSaveAsTemplate(form.id); }}
+                                      className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-lime-700 hover:bg-lime-500/30 transition-all"
+                                      title="Save as Template"
+                                  >
+                                      <ClipboardCopyIcon className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPreviewingForm(form);
+                                      }}
+                                      className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-sky-700 hover:bg-sky-500/30 transition-all"
+                                      title="Preview Form"
+                                  >
+                                      <EyeIcon className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingForm(form);
+                                          setView('formBuilder');
+                                      }}
+                                      className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-slate-700 hover:bg-slate-500/30 transition-all"
+                                      title="Edit Form"
+                                  >
+                                      <EditIcon className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          onDeleteForm(form.id);
+                                      }}
+                                      className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-red-700 hover:bg-red-500/30 transition-all"
+                                      title="Move to Trash"
+                                  >
+                                      <TrashIcon className="w-5 h-5" />
+                                  </button>
+                              </div>
+                          )}
+                          <div>
+                          <div className="flex items-start justify-between mb-4">
+                              <div className="p-3 bg-sky-100 rounded-lg">
+                                  <FileIcon className="w-6 h-6 text-sky-700" />
+                              </div>
+                              {isComplete && <span title="Form Completed"><CheckCircleIcon className="w-6 h-6 text-lime-500" /></span>}
+                          </div>
+                          <h3 className="text-xl font-semibold text-slate-800 truncate">{form.title}</h3>
+                          {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
+                          </div>
+                          
+                          <div className="mt-4">
+                          <div className="flex justify-between items-center mb-1 text-sm text-slate-600">
+                              <span>Progress</span>
+                              <span>{Math.round(progress)}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-2.5">
+                              <div className={`${isComplete ? 'bg-lime-500' : 'bg-sky-800'} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${progress}%` }}></div>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-2">{completedCount} of {formSections.length} sections completed</p>
+                          </div>
+                      </div>
+                      );
+                  })}
+              </div>
+            )}
+            
+            {view === 'drafts' && currentUser.role === 'Admin' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {draftForms.map(form => {
+                      const creator = allUsers.find(u => u.id === form.createdBy);
+                      return (
+                          <div key={form.id} className="relative group backdrop-blur-md bg-white/40 p-6 rounded-2xl border border-white/50 shadow-lg flex flex-col justify-between">
+                              <div>
+                                  <div className="flex items-start justify-between mb-4">
+                                      <div className="p-3 bg-amber-100 rounded-lg">
+                                          <EditIcon className="w-6 h-6 text-amber-700" />
+                                      </div>
+                                      <span className="text-xs font-semibold text-amber-800 bg-amber-200 px-2 py-1 rounded-full">DRAFT</span>
+                                  </div>
+                                  <h3 className="text-xl font-semibold text-slate-800 truncate">{form.title}</h3>
+                                  {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
+                              </div>
+                              <div className="mt-6 flex justify-end gap-2 border-t pt-4">
+                                  <button onClick={() => onDeleteForm(form.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Move to Trash"><TrashIcon className="w-5 h-5"/></button>
+                                  <button onClick={(e) => { e.stopPropagation(); onDuplicateDraft(form.id); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Duplicate Draft"><CopyIcon className="w-5 h-5"/></button>
+                                  <button onClick={(e) => { e.stopPropagation(); setPreviewingForm(form); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Preview Form"><EyeIcon className="w-5 h-5"/></button>
+                                  <button onClick={() => { setEditingForm(form); setView('formBuilder'); }} className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors" title="Edit Form"><EditIcon className="w-5 h-5"/></button>
+                                  <button onClick={() => handlePublishForm(form.id)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-lime-500/80 border border-lime-500/90 shadow-lg hover:bg-lime-600/80 rounded-xl transition-all" title="Publish Form">
+                                      <CheckCircleIcon className="w-4 h-4"/> Publish
+                                  </button>
+                              </div>
+                          </div>
+                      )
+                  })}
+              </div>
+            )}
+
+            {view === 'templates' && currentUser.role === 'Admin' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {allTemplates.map(template => {
+                      const creator = allUsers.find(u => u.id === template.createdBy);
+                      return (
+                          <div key={template.id} className="relative group backdrop-blur-md bg-white/40 p-6 rounded-2xl border border-white/50 shadow-lg flex flex-col justify-between">
+                              <div>
+                                  <div className="flex items-start justify-between mb-4">
+                                      <div className="p-3 bg-lime-100 rounded-lg">
+                                          <ClipboardCopyIcon className="w-6 h-6 text-lime-700" />
+                                      </div>
+                                      <span className="text-xs font-semibold text-lime-800 bg-lime-200 px-2 py-1 rounded-full">TEMPLATE</span>
+                                  </div>
+                                  <h3 className="text-xl font-semibold text-slate-800 truncate">{template.title.replace(/\[Template\]\s*/i, '')}</h3>
+                                  {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
+                              </div>
+                              <div className="mt-6 flex justify-end gap-2 border-t pt-4">
+                                  <button onClick={() => onDeleteForm(template.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Move to Trash"><TrashIcon className="w-5 h-5"/></button>
+                                  <button onClick={() => { setEditingForm(template); setView('formBuilder'); }} className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors" title="Edit Template"><EditIcon className="w-5 h-5"/></button>
+                                  <button onClick={() => handleStartFromTemplate(template)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-sky-600/80 border border-sky-600/90 shadow-lg hover:bg-sky-700/80 rounded-xl transition-all">
+                                      Use Template
+                                  </button>
+                              </div>
+                          </div>
+                      )
+                  })}
+              </div>
+            )}
         </div>
       </main>
     </div>
   );
-};
+});
 
 export default Dashboard;

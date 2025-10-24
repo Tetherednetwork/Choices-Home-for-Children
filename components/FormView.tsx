@@ -57,13 +57,12 @@ const StarRating: React.FC<{
 const SectionContent: React.FC<{
   section: Section;
   response: Response | undefined;
-  setResponses: React.Dispatch<React.SetStateAction<Response[]>>;
+  onSectionSubmit: (sectionId: number, answers: { [questionId: string]: any }) => void;
   canEdit: boolean;
   allUsers: User[];
-  addNotification: (message: string) => void;
   currentUser: User;
   isPreview?: boolean;
-}> = ({ section, response, setResponses, canEdit, allUsers, addNotification, currentUser, isPreview }) => {
+}> = ({ section, response, onSectionSubmit, canEdit, allUsers, currentUser, isPreview }) => {
   const [answers, setAnswers] = useState(response?.content || {});
   
   useEffect(() => {
@@ -98,14 +97,7 @@ const SectionContent: React.FC<{
 
 
   const handleSave = () => {
-    if (window.confirm("Are you sure you want to submit? This action is final and will lock this section from further edits.")) {
-      setResponses(prev =>
-        prev.map(r =>
-          r.sectionId === section.id ? { ...r, content: answers, status: 'completed' } : r
-        )
-      );
-      addNotification(`${currentUser.name} has completed the "${section.title}" section.`);
-    }
+    onSectionSubmit(section.id, answers);
   };
   
   const isCompleted = response?.status === 'completed';
@@ -328,6 +320,46 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
   const formRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
+  const handleSectionSubmit = (sectionId: number, answers: { [questionId: string]: any }) => {
+    if (window.confirm("Are you sure you want to submit? This action is final and will lock this section from further edits.")) {
+        const newResponses = allResponses.map(r =>
+            r.sectionId === sectionId ? { ...r, content: answers, status: 'completed', filledBy: currentUser.id } : r
+        );
+        setResponses(newResponses);
+
+        const completedSection = allSections.find(s => s.id === sectionId);
+        if (!completedSection) return;
+
+        // General completion notification for everyone
+        addNotification(`${currentUser.name} completed the "${completedSection.title}" section in "${form.title}".`);
+
+        // Reminder for next user
+        const sortedSections = [...allSections].sort((a, b) => a.order - b.order);
+        const currentSectionIndex = sortedSections.findIndex(s => s.id === completedSection.id);
+        const nextSection = sortedSections[currentSectionIndex + 1];
+
+        if (nextSection) {
+            const nextUser = allUsers.find(u => u.id === nextSection.assignedTo);
+            const nextResponse = newResponses.find(r => r.sectionId === nextSection.id);
+            // only notify if it's not the same user and the next section is pending
+            if (nextUser && nextUser.id !== currentUser.id && nextResponse?.status === 'pending') {
+                const reminderMessage = `Hi ${nextUser.name.split(' ')[0]}, "${completedSection.title}" is complete. It's your turn for "${nextSection.title}".`;
+                addNotification(reminderMessage);
+            }
+        }
+
+        // Check for overall form completion
+        const sectionsForThisFormIds = allSections.map(s => s.id);
+        const completedCount = newResponses.filter(r => sectionsForThisFormIds.includes(r.sectionId) && r.status === 'completed').length;
+        
+        if (completedCount === allSections.length && allSections.length > 0) {
+            const formCompletedMessage = `🎉 The form "${form.title}" is now fully completed!`;
+            addNotification(formCompletedMessage);
+        }
+    }
+  };
+
+
   const handleExportPDF = () => {
     if (formRef.current) {
       setIsExporting(true);
@@ -435,7 +467,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
                         
                         {!isPreview && currentUser.role === 'Admin' && isSectionPending && currentUser.id !== assignedUser?.id && (
                             <button 
-                                onClick={() => alert(`A reminder email has been sent to ${assignedUser?.email}.`)}
+                                onClick={() => addNotification(`A reminder email has been sent to ${assignedUser?.email}.`)}
                                 className={`p-1.5 rounded-full transition-colors no-print ${isOverdue ? 'bg-red-100 hover:bg-red-200' : 'hover:bg-slate-200'}`}
                                 aria-label={`Send reminder to ${assignedUser?.name}`}
                                 title={`Send reminder to ${assignedUser?.name}`}
@@ -450,10 +482,9 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
                   <SectionContent
                     section={section}
                     response={response}
-                    setResponses={setResponses}
+                    onSectionSubmit={handleSectionSubmit}
                     canEdit={canEdit}
                     allUsers={allUsers}
-                    addNotification={addNotification}
                     currentUser={currentUser}
                     isPreview={isPreview}
                   />

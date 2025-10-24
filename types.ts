@@ -51,3 +51,5 @@ export interface Notification {
   id: number;
   message: string;
 }
+
+export type DashboardView = 'published' | 'drafts' | 'templates' | 'trash' | 'formBuilder' | 'userManagement' | 'profile';
