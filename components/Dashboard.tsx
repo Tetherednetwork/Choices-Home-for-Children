@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User, Form, Section, Response, Notification, FormStatus } from '../types';
 import FormView from './FormView';
-import { LogOutIcon, FileIcon, PlusIcon, UsersIcon, CheckCircleIcon, ArchiveIcon, TrashIcon, BellIcon, EditIcon, EyeIcon } from './icons';
+import { LogOutIcon, FileIcon, PlusIcon, UsersIcon, CheckCircleIcon, ArchiveIcon, TrashIcon, BellIcon, EditIcon, EyeIcon, CopyIcon, ClipboardCopyIcon, XIcon, SearchIcon, ShareIcon } from './icons';
 import FormBuilder from './FormBuilder';
 import UserManagement from './UserManagement';
 import ProfileView from './ProfileView';
@@ -25,21 +25,121 @@ interface DashboardProps {
   onRestoreForm: (formId: number) => void;
   onPermanentlyDeleteForm: (formId: number) => void;
   notifications: Notification[];
+  onDuplicateDraft: (formId: number) => void;
+  onSaveAsTemplate: (formId: number) => void;
 }
 
 type DashboardView = 'dashboard' | 'formBuilder' | 'userManagement' | 'profile' | 'trash';
+type FormProgressStatus = 'all' | 'completed' | 'inProgress' | 'overdue' | 'notStarted';
+
+const TemplateModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  templates: Form[];
+  onSelectTemplate: (template: Form) => void;
+  onStartFromScratch: () => void;
+}> = ({ isOpen, onClose, templates, onSelectTemplate, onStartFromScratch }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="backdrop-blur-xl bg-white/50 p-6 rounded-2xl shadow-2xl border border-white/60 w-full max-w-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold text-slate-800">Create New Form</h3>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200"><XIcon className="w-5 h-5"/></button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+          <div className="p-4 border-2 border-dashed border-slate-300 hover:border-sky-500 hover:bg-sky-50 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-colors" onClick={onStartFromScratch}>
+            <PlusIcon className="w-10 h-10 text-sky-600 mb-2"/>
+            <h4 className="font-semibold text-slate-800">Start from Scratch</h4>
+            <p className="text-sm text-slate-500">Create a brand new form.</p>
+          </div>
+          {templates.length > 0 && (
+            <div className="md:col-span-2 border-t pt-4 mt-2">
+              <h4 className="font-semibold text-slate-800 mb-2 text-center">Or use a template</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {templates.map(template => (
+                  <div key={template.id} className="p-3 border border-slate-200 bg-white/50 hover:border-sky-400 hover:shadow-md rounded-lg cursor-pointer transition-all" onClick={() => onSelectTemplate(template)}>
+                    <p className="font-semibold text-slate-700 truncate">{template.title.replace(/\[Template\]\s*/i, '')}</p>
+                    <p className="text-xs text-slate-500">Template</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const ShareModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    data: { formTitle: string; link: string } | null;
+}> = ({ isOpen, onClose, data }) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    if (!isOpen || !data) return null;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(data.link);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="backdrop-blur-xl bg-white/50 p-6 rounded-2xl shadow-2xl border border-white/60 w-full max-w-lg">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold text-slate-800">Share Form: {data.formTitle}</h3>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200"><XIcon className="w-5 h-5"/></button>
+                </div>
+                <div>
+                    <p className="text-sm text-slate-600 mb-2">Anyone with this link can view a read-only preview of the form.</p>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            readOnly
+                            value={data.link}
+                            className="w-full p-2 border border-slate-300 rounded-md bg-white/70"
+                            onFocus={(e) => e.target.select()}
+                        />
+                        <button
+                            onClick={handleCopy}
+                            className={`flex items-center justify-center gap-2 px-4 py-2 w-32 font-semibold text-white rounded-xl shadow-lg transition-all duration-300 ${isCopied ? 'bg-lime-500/90 border-lime-600/90' : 'bg-sky-600/80 border-sky-600/90 hover:bg-sky-700/80'}`}
+                        >
+                            {isCopied ? (
+                                <> <CheckCircleIcon className="w-5 h-5"/> Copied! </>
+                            ) : (
+                                <> <ClipboardCopyIcon className="w-5 h-5"/> Copy </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   currentUser, onLogout, allUsers, onCreateUser, onUpdateUser,
   forms, sections, responses, setForms, setSections, setResponses,
   addNotification, onDeleteForm, onRestoreForm, onPermanentlyDeleteForm,
-  notifications
+  notifications, onDuplicateDraft, onSaveAsTemplate
 }) => {
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [view, setView] = useState<DashboardView>('dashboard');
   const [editingForm, setEditingForm] = useState<Form | null>(null);
   const [previewingForm, setPreviewingForm] = useState<Form | null>(null);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [creatorFilter, setCreatorFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<FormProgressStatus>('all');
+  const [shareModalData, setShareModalData] = useState<{ formTitle: string; link: string } | null>(null);
 
+  
   const handleSaveForm = (
     formData: { id?: number; title: string; sections: Omit<Section, 'id' | 'formId' | 'order'>[]; dueDate?: string },
     status: 'draft' | 'published'
@@ -116,18 +216,93 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const userVisibleForms = useMemo(() => {
-    const publishedForms = forms.filter(f => f.status === 'published');
+  const handleShareForm = (formId: number) => {
+    const form = forms.find(f => f.id === formId);
+    if (!form) return;
+
+    const shareId = form.shareId || crypto.randomUUID();
+    
+    if (!form.shareId) {
+        setForms(prevForms => prevForms.map(f => f.id === formId ? { ...f, shareId } : f));
+    }
+
+    const link = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
+    setShareModalData({ formTitle: form.title, link });
+  };
+
+  const getFormStatus = (form: Form, formSections: Section[], formResponses: Response[]): Omit<FormProgressStatus, 'all'> => {
+    if (form.status !== 'published') {
+        return 'notStarted'; // Should not happen for this function's use case
+    }
+    const completedCount = formResponses.filter(r => r.status === 'completed').length;
+    const progress = formSections.length > 0 ? (completedCount / formSections.length) * 100 : 0;
+
+    if (progress === 100) return 'completed';
+
+    const isOverdue = form.dueDate ? new Date() > new Date(form.dueDate) : false;
+    if (isOverdue) return 'overdue';
+    
+    if (progress > 0) return 'inProgress';
+
+    return 'notStarted';
+  };
+
+  const uniqueCreators = useMemo(() => {
+    const creatorIds = [...new Set(forms.filter(f => f.status !== 'template').map(f => f.createdBy))];
+    return allUsers.filter(u => creatorIds.includes(u.id));
+  }, [forms, allUsers]);
+
+  const filteredForms = useMemo(() => {
+    return forms.filter(form => {
+        if (searchQuery && !form.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+            return false;
+        }
+
+        if (currentUser.role === 'Admin' && creatorFilter !== 'all' && form.createdBy !== parseInt(creatorFilter)) {
+            return false;
+        }
+
+        if (statusFilter !== 'all') {
+            if (form.status !== 'published') {
+                return false;
+            }
+            const formSections = sections.filter(s => s.formId === form.id);
+            const formResponses = responses.filter(r => formSections.some(fs => fs.id === r.sectionId));
+            const currentStatus = getFormStatus(form, formSections, formResponses);
+            if (currentStatus !== statusFilter) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+  }, [forms, searchQuery, creatorFilter, statusFilter, sections, responses, currentUser.role]);
+
+  const draftForms = useMemo(() => filteredForms.filter(f => f.status === 'draft'), [filteredForms]);
+  
+  const formsForCurrentUser = useMemo(() => {
+    const published = filteredForms.filter(f => f.status === 'published');
     if (currentUser.role === 'Admin' || currentUser.role === 'Viewer') {
-      return publishedForms;
+      return published;
     }
     const userSections = sections.filter(s => s.assignedTo === currentUser.id);
     const formIds = [...new Set(userSections.map(s => s.formId))];
-    return publishedForms.filter(f => formIds.includes(f.id));
-  }, [currentUser, forms, sections]);
+    return published.filter(f => formIds.includes(f.id));
+  }, [currentUser, filteredForms, sections]);
   
-  const draftForms = useMemo(() => forms.filter(f => f.status === 'draft'), [forms]);
-  const publishedForms = useMemo(() => forms.filter(f => f.status === 'published'), [forms]);
+  const templates = useMemo(() => forms.filter(f => f.status === 'template'), [forms]);
+
+  const handleStartFromScratch = () => {
+    setEditingForm(null);
+    setIsTemplateModalOpen(false);
+    setView('formBuilder');
+  };
+
+  const handleStartFromTemplate = (template: Form) => {
+    setEditingForm({ ...template, id: undefined, title: template.title.replace(/\[Template\]\s*/i, '') });
+    setIsTemplateModalOpen(false);
+    setView('formBuilder');
+  };
 
 
   if (selectedForm) {
@@ -168,7 +343,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             onSave={handleSaveForm}
             onCancel={() => { setEditingForm(null); setView('dashboard'); }}
             formToEdit={editingForm}
-            sectionsForForm={editingForm ? sections.filter(s => s.formId === editingForm.id) : []}
+            sectionsForForm={editingForm ? sections.filter(s => s.formId === (editingForm as any).id) : []}
             responses={responses}
           />
       );
@@ -208,10 +383,20 @@ const Dashboard: React.FC<DashboardProps> = ({
     )
   }
 
-  const formsForCurrentUser = currentUser.role === 'Admin' ? publishedForms : userVisibleForms;
-
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      <TemplateModal 
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        templates={templates}
+        onSelectTemplate={handleStartFromTemplate}
+        onStartFromScratch={handleStartFromScratch}
+      />
+      <ShareModal
+        isOpen={!!shareModalData}
+        onClose={() => setShareModalData(null)}
+        data={shareModalData}
+      />
       <header className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
              <div className="p-2 backdrop-blur-md bg-white/40 border border-white/50 shadow-md rounded-xl flex items-center justify-center">
@@ -230,7 +415,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           {currentUser.role === 'Admin' && (
             <>
               <button
-                onClick={() => { setEditingForm(null); setView('formBuilder'); }}
+                onClick={() => setIsTemplateModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-lime-500/80 border border-lime-500/90 shadow-lg hover:bg-lime-600/80 hover:shadow-xl rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lime-500/80"
               >
                   <PlusIcon className="w-4 h-4" />
@@ -281,6 +466,44 @@ const Dashboard: React.FC<DashboardProps> = ({
           </button>
         </div>
       </header>
+
+      <div className="flex flex-col sm:flex-row items-center gap-4 mb-8 p-4 backdrop-blur-md bg-white/30 border border-white/40 shadow-sm rounded-xl">
+        <div className="relative w-full sm:flex-grow">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+            <input
+                type="text"
+                placeholder="Search forms by title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm font-semibold text-slate-800 bg-white/50 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500/80"
+            />
+        </div>
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+            {currentUser.role === 'Admin' && (
+                <select
+                    value={creatorFilter}
+                    onChange={(e) => setCreatorFilter(e.target.value)}
+                    className="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-slate-800 bg-white/50 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500/80"
+                    aria-label="Filter by creator"
+                >
+                    <option value="all">All Creators</option>
+                    {uniqueCreators.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
+                </select>
+            )}
+            <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as FormProgressStatus)}
+                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-slate-800 bg-white/50 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500/80"
+                aria-label="Filter by status"
+            >
+                <option value="all">All Statuses</option>
+                <option value="completed">Completed</option>
+                <option value="inProgress">In Progress</option>
+                <option value="overdue">Overdue</option>
+                <option value="notStarted">Not Started</option>
+            </select>
+        </div>
+      </div>
       
       <main className="space-y-12">
         {currentUser.role === 'Admin' && (
@@ -303,6 +526,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 </div>
                                 <div className="mt-6 flex justify-end gap-2 border-t pt-4">
                                     <button onClick={() => onDeleteForm(form.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Move to Trash"><TrashIcon className="w-5 h-5"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); onDuplicateDraft(form.id); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Duplicate Draft"><CopyIcon className="w-5 h-5"/></button>
                                     <button onClick={(e) => { e.stopPropagation(); setPreviewingForm(form); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Preview Form"><EyeIcon className="w-5 h-5"/></button>
                                     <button onClick={() => { setEditingForm(form); setView('formBuilder'); }} className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors" title="Edit Form"><EditIcon className="w-5 h-5"/></button>
                                     <button onClick={() => handlePublishForm(form.id)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md bg-lime-500/80 border border-lime-500/90 shadow-lg hover:bg-lime-600/80 rounded-xl transition-all" title="Publish Form">
@@ -336,6 +560,20 @@ const Dashboard: React.FC<DashboardProps> = ({
                     >
                         {currentUser.role === 'Admin' && (
                              <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleShareForm(form.id); }}
+                                    className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-sky-700 hover:bg-sky-500/30 transition-all"
+                                    title="Share Form"
+                                >
+                                    <ShareIcon className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onSaveAsTemplate(form.id); }}
+                                    className="p-2 backdrop-blur-sm bg-white/30 rounded-full text-lime-700 hover:bg-lime-500/30 transition-all"
+                                    title="Save as Template"
+                                >
+                                    <ClipboardCopyIcon className="w-5 h-5" />
+                                </button>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();

@@ -389,7 +389,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, se
           </div>
         )}
 
-        {!isPreview && (currentUser.role === 'Admin' || currentUser.role === 'Viewer') && (
+        {!isPreview && currentUser.role === 'Admin' && (
           <button
             onClick={handleExportPDF}
             disabled={isExporting}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Question, QuestionType, Form, Section, Response } from '../types';
-import { PlusIcon, TrashIcon, GripVerticalIcon, LockIcon, EyeIcon } from './icons';
+import { PlusIcon, TrashIcon, GripVerticalIcon, LockIcon, EyeIcon, CopyIcon } from './icons';
 import FormView from './FormView';
 
 type TempQuestion = Omit<Question, 'id'> & { tempId: string; options: string[] };
@@ -32,32 +32,39 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
     const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
     const [isPreviewing, setIsPreviewing] = useState(false);
     
+    const [initialStateJSON, setInitialStateJSON] = useState<string>('');
+    const isExiting = useRef(false);
+    
     useEffect(() => {
         if (formToEdit) {
             // Editing mode, load data from props
-            setTitle(formToEdit.title);
-            setDueDate(formToEdit.dueDate || '');
+            const loadedTitle = formToEdit.title;
+            const loadedDueDate = formToEdit.dueDate || '';
             setFormId(formToEdit.id);
-            if (sectionsForForm) {
-                const tempSections = sectionsForForm.map(s => {
-                    const response = responses.find(r => r.sectionId === s.id);
-                    return {
-                        tempId: `section-${s.id}-${Date.now()}`,
-                        originalId: s.id,
-                        isCompleted: response?.status === 'completed',
-                        title: s.title,
-                        assignedTo: s.assignedTo,
-                        questions: s.questions.map(q => ({
-                            tempId: `question-${q.id}-${Date.now()}`,
-                            text: q.text,
-                            type: q.type,
-                            options: q.options || [],
-                            required: q.required || false,
-                        }))
-                    };
-                });
-                setSections(tempSections);
-            }
+            const tempSections = sectionsForForm ? sectionsForForm.map(s => {
+                const response = responses.find(r => r.sectionId === s.id);
+                return {
+                    tempId: `section-${s.id}-${Date.now()}`,
+                    originalId: s.id,
+                    isCompleted: response?.status === 'completed',
+                    title: s.title,
+                    assignedTo: s.assignedTo,
+                    questions: s.questions.map(q => ({
+                        tempId: `question-${q.id}-${Date.now()}`,
+                        text: q.text,
+                        type: q.type,
+                        options: q.options || [],
+                        required: q.required || false,
+                    }))
+                };
+            }) : [];
+
+            setTitle(loadedTitle);
+            setDueDate(loadedDueDate);
+            setSections(tempSections);
+            
+            setInitialStateJSON(JSON.stringify({ title: loadedTitle, dueDate: loadedDueDate, sections: tempSections }));
+            
             localStorage.removeItem(DRAFT_KEY); // Clear any old new-form drafts
         } else {
             // New form mode, check for local draft
@@ -67,17 +74,28 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                     const draft = JSON.parse(savedDraft);
                     if (draft.title || draft.sections?.length > 0 || draft.dueDate) {
                          if (window.confirm('You have an unsaved draft. Would you like to restore it?')) {
-                            setTitle(draft.title || '');
-                            setSections(draft.sections || []);
-                            setDueDate(draft.dueDate || '');
+                            const restoredTitle = draft.title || '';
+                            const restoredSections = draft.sections || [];
+                            const restoredDueDate = draft.dueDate || '';
+                            
+                            setTitle(restoredTitle);
+                            setSections(restoredSections);
+                            setDueDate(restoredDueDate);
+                            setInitialStateJSON(JSON.stringify({ title: restoredTitle, dueDate: restoredDueDate, sections: restoredSections }));
                         } else {
                             localStorage.removeItem(DRAFT_KEY);
+                            setInitialStateJSON(JSON.stringify({ title: '', dueDate: '', sections: [] }));
                         }
+                    } else {
+                        setInitialStateJSON(JSON.stringify({ title: '', dueDate: '', sections: [] }));
                     }
                 } catch (error) {
                     console.error("Failed to parse form builder draft:", error);
                     localStorage.removeItem(DRAFT_KEY);
+                    setInitialStateJSON(JSON.stringify({ title: '', dueDate: '', sections: [] }));
                 }
+            } else {
+                setInitialStateJSON(JSON.stringify({ title: '', dueDate: '', sections: [] }));
             }
         }
     }, [formToEdit, sectionsForForm, responses]);
@@ -93,6 +111,27 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
             }
         }
     }, [title, sections, dueDate, formToEdit]);
+
+    useEffect(() => {
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (isExiting.current) {
+                return;
+            }
+
+            const currentStateJSON = JSON.stringify({ title, dueDate, sections });
+            
+            if (currentStateJSON !== initialStateJSON) {
+                event.preventDefault();
+                event.returnValue = ''; // Required for modern browsers
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [title, dueDate, sections, initialStateJSON]);
 
     const addSection = () => {
         setSections([...sections, {
@@ -111,6 +150,28 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
         if (confirm('Are you sure you want to delete this section?')) {
             setSections(sections.filter(s => s.tempId !== tempId));
         }
+    };
+    
+    const duplicateSection = (tempId: string) => {
+        const sectionToDuplicate = sections.find(s => s.tempId === tempId);
+        if (!sectionToDuplicate) return;
+
+        const newSection: TempSection = {
+            ...sectionToDuplicate,
+            title: `${sectionToDuplicate.title} (Copy)`,
+            tempId: `section-${Date.now()}`,
+            originalId: undefined, // It's a new section
+            isCompleted: false, // Duplicated sections are never completed
+            questions: sectionToDuplicate.questions.map(q => ({
+                ...q,
+                tempId: `question-${Date.now()}-${Math.random()}`, // ensure unique tempId
+            })),
+        };
+        
+        const originalIndex = sections.findIndex(s => s.tempId === tempId);
+        const newSections = [...sections];
+        newSections.splice(originalIndex + 1, 0, newSection);
+        setSections(newSections);
     };
 
     const addQuestion = (sectionTempId: string) => {
@@ -207,6 +268,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
 
     const handleSaveDraft = () => {
         if (!validateForm()) return;
+        isExiting.current = true;
         const payload = prepareSaveData();
         localStorage.removeItem(DRAFT_KEY);
         onSave(payload, 'draft');
@@ -215,6 +277,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
     const handlePublish = () => {
         if (!validateForm()) return;
         if (window.confirm('Are you sure you want to save and publish this form? It will become visible to all assigned users.')) {
+            isExiting.current = true;
             const payload = prepareSaveData();
             localStorage.removeItem(DRAFT_KEY);
             onSave(payload, 'published');
@@ -222,17 +285,19 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
     };
 
     const handleCancel = () => {
-        if (formToEdit) { // If editing, just cancel
-            onCancel();
-        } else { // If creating new, check if there is content
-            if (title.trim() || sections.length > 0 || dueDate) {
-                if (window.confirm('Are you sure you want to cancel? Your current draft will be discarded.')) {
-                    localStorage.removeItem(DRAFT_KEY);
-                    onCancel();
-                }
-            } else {
-                 onCancel();
+        const currentStateJSON = JSON.stringify({ title, dueDate, sections });
+        const hasChanges = currentStateJSON !== initialStateJSON;
+
+        if (hasChanges) {
+            if (window.confirm('Are you sure you want to cancel? Your changes will be discarded.')) {
+                isExiting.current = true;
+                localStorage.removeItem(DRAFT_KEY);
+                onCancel();
             }
+        } else {
+            isExiting.current = true;
+            localStorage.removeItem(DRAFT_KEY);
+            onCancel();
         }
     };
 
@@ -378,7 +443,10 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                                 </span>
                                 <h2 className="text-xl font-semibold text-slate-800">Section {sectionIndex + 1}</h2>
                             </div>
-                            <button onClick={() => removeSection(section.tempId)} disabled={section.isCompleted} className="p-2 text-red-500 hover:bg-red-100 rounded-full disabled:text-slate-400 disabled:hover:bg-transparent disabled:cursor-not-allowed"><TrashIcon className="w-5 h-5"/></button>
+                            <div>
+                                <button onClick={() => duplicateSection(section.tempId)} disabled={section.isCompleted} className="p-2 text-sky-600 hover:bg-sky-100 rounded-full disabled:text-slate-400 disabled:hover:bg-transparent disabled:cursor-not-allowed" title="Duplicate Section"><CopyIcon className="w-5 h-5"/></button>
+                                <button onClick={() => removeSection(section.tempId)} disabled={section.isCompleted} className="p-2 text-red-500 hover:bg-red-100 rounded-full disabled:text-slate-400 disabled:hover:bg-transparent disabled:cursor-not-allowed" title="Delete Section"><TrashIcon className="w-5 h-5"/></button>
+                            </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                             <div>

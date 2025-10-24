@@ -9,7 +9,7 @@ export interface User {
   pin?: string;
 }
 
-export type FormStatus = 'draft' | 'published' | 'deleted';
+export type FormStatus = 'draft' | 'published' | 'deleted' | 'template';
 
 export interface Form {
   id: number;
@@ -17,6 +17,7 @@ export interface Form {
   createdBy: number; // user id
   status: FormStatus;
   dueDate?: string;
+  shareId?: string;
 }
 
 export type QuestionType = 'short-answer' | 'paragraph' | 'multiple-choice' | 'checkboxes' | 'signature' | 'rating' | 'date' | 'mobile' | 'email' | 'file-upload' | 'url';
