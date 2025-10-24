@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { User, Form, Section, Response, Notification, DashboardView } from './types';
 import LoginScreen from './components/LoginScreen';
 import Dashboard, { DashboardHandle } from './components/Dashboard';
@@ -80,6 +80,7 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (user: User) => {
+    localStorage.setItem('collaborative-forms-last-user-id', user.id.toString());
     setCurrentUser(user);
   };
 
@@ -246,6 +247,19 @@ const App: React.FC = () => {
     );
   }
 
+  const sortedUsersForLogin = useMemo(() => {
+    const lastUserIdStr = localStorage.getItem('collaborative-forms-last-user-id');
+    if (lastUserIdStr) {
+      const lastUserId = parseInt(lastUserIdStr, 10);
+      const lastUser = users.find(u => u.id === lastUserId);
+      if (lastUser) {
+        const otherUsers = users.filter(u => u.id !== lastUserId);
+        return [lastUser, ...otherUsers];
+      }
+    }
+    return users;
+  }, [users]);
+
 
   return (
     <div className="min-h-screen text-slate-800 flex flex-col">
@@ -283,7 +297,7 @@ const App: React.FC = () => {
             setIsTemplateModalOpen={setIsTemplateModalOpen}
           />
         ) : (
-          <LoginScreen users={users} onLogin={handleLogin} />
+          <LoginScreen users={sortedUsersForLogin} onLogin={handleLogin} />
         )}
       </main>
       <Footer />

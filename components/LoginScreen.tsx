@@ -94,20 +94,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
             <h1 className="text-2xl font-bold text-slate-900">Sign In</h1>
             <p className="mt-2 text-md text-gray-600">Please select a user to log in</p>
         </div>
-        <div className="space-y-4 mt-8">
-          {users.map((user) => (
-            <button
-              key={user.id}
-              onClick={() => handleUserSelect(user)}
-              className="w-full flex items-center p-4 text-left backdrop-blur-md bg-white/30 border border-white/40 shadow-sm hover:bg-white/40 hover:shadow-md rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-500/80"
-            >
-              <UserIcon name={user.name} color={user.color} className="flex-shrink-0 h-10 w-10" />
-              <div className="ml-4">
-                <p className="text-lg font-semibold text-slate-800">{user.name}</p>
-                <p className="text-sm text-slate-500">{user.role}</p>
-              </div>
-            </button>
-          ))}
+        <div className="mt-8">
+          <div className="max-h-[380px] overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+            {users.map((user) => (
+              <button
+                key={user.id}
+                onClick={() => handleUserSelect(user)}
+                className="w-full flex items-center p-4 text-left backdrop-blur-md bg-white/30 border border-white/40 shadow-sm hover:bg-white/40 hover:shadow-md rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-500/80"
+              >
+                <UserIcon name={user.name} color={user.color} className="flex-shrink-0 h-10 w-10" />
+                <div className="ml-4">
+                  <p className="text-lg font-semibold text-slate-800">{user.name}</p>
+                  <p className="text-sm text-slate-500">{user.role}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
   );
