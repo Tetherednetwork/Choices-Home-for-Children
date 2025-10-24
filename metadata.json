@@ -1,0 +1,5 @@
+{
+  "name": "Collaborative Form System",
+  "description": "A multi-user form system where an admin assigns sections of a form to different users. Each user fills their assigned section, and the admin can view progress and download the completed form as a single PDF.",
+  "requestFramePermissions": []
+}
