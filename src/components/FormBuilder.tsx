@@ -260,7 +260,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                 id: q.tempId,
                 text: q.text,
                 type: q.type,
-                options: q.options.filter(opt => opt != null && String(opt).trim() !== ''),
+                options: Array.isArray(q.options) ? q.options.filter(opt => String(opt).trim() !== '') : [],
                 required: q.required
             }))
         }));
@@ -353,7 +353,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                 id: q.tempId,
                 text: q.text || 'Untitled Question',
                 type: q.type,
-                options: q.options || [],
+                options: Array.isArray(q.options) ? q.options : [],
                 required: q.required,
             }))
         }));
@@ -395,7 +395,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                             <input
                                 type="text"
                                 id="form-title"
-                                value={title || ''}
+                                value={title}
                                 onChange={e => setTitle(e.target.value)}
                                 className="mt-1 block w-full text-lg p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
                                 placeholder="e.g., Quarterly Performance Review"
@@ -406,7 +406,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                             <input
                                 type="date"
                                 id="form-due-date"
-                                value={dueDate || ''}
+                                value={dueDate}
                                 onChange={e => setDueDate(e.target.value)}
                                 min={new Date().toISOString().split("T")[0]}
                                 className="mt-1 block w-full text-lg p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
@@ -455,7 +455,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                                 <input
                                     type="text"
                                     id={`section-title-${section.tempId}`}
-                                    value={section.title || ''}
+                                    value={section.title}
                                     onChange={e => updateSection(section.tempId, 'title', e.target.value)}
                                     className="mt-1 block w-full p-2 border border-slate-300 rounded-md shadow-sm disabled:bg-slate-100"
                                     placeholder="e.g., Marketing Goals"
@@ -484,7 +484,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                                         <div className="flex-grow pr-4">
                                             <input
                                                 type="text"
-                                                value={q.text || ''}
+                                                value={q.text}
                                                 onChange={e => updateQuestion(section.tempId, q.tempId, 'text', e.target.value)}
                                                 placeholder={`Question ${qIndex + 1}`}
                                                 className="w-full p-2 border-b border-slate-200 focus:border-sky-500 outline-none bg-transparent disabled:bg-slate-100"

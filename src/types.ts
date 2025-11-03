@@ -1,0 +1,56 @@
+
+export type UserRole = 'Admin' | 'User' | 'Viewer';
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  color: string;
+  pin?: string;
+}
+
+export type FormStatus = 'draft' | 'published' | 'deleted' | 'template';
+
+export interface Form {
+  id: number;
+  title: string;
+  createdBy: number; // user id
+  status: FormStatus;
+  dueDate?: string;
+  shareId?: string;
+}
+
+export type QuestionType = 'short-answer' | 'paragraph' | 'multiple-choice' | 'checkboxes' | 'signature' | 'rating' | 'date' | 'mobile' | 'email' | 'file-upload' | 'url';
+
+export interface Question {
+    id: string;
+    text: string;
+    type: QuestionType;
+    options?: string[];
+    required?: boolean;
+}
+
+export interface Section {
+  id: number;
+  formId: number;
+  title: string;
+  assignedTo: number; // user id
+  order: number;
+  questions: Question[];
+}
+
+export interface Response {
+  id: number;
+  sectionId: number;
+  content: { [questionId: string]: any }; // e.g., { 'q1': 'Answer text', 'q2': ['Option 1', 'Option 3'], 'q3': 'data:image/png;base64,...', 'q4': 4 }
+  filledBy: number; // user id
+  status: 'pending' | 'completed';
+}
+
+export interface Notification {
+  id: number;
+  message: string;
+}
+
+export type DashboardView = 'published' | 'drafts' | 'templates' | 'trash' | 'formBuilder' | 'userManagement' | 'profile';

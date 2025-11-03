@@ -1,13 +1,22 @@
 import { User, Form, Section, Response, Question } from '../types';
 
-const userColors = ['bg-sky-600', 'bg-lime-600', 'bg-amber-600', 'bg-violet-600', 'bg-rose-600', 'bg-teal-600'];
+const userColors = [
+    'bg-sky-600', 'bg-lime-600', 'bg-amber-600', 'bg-violet-600', 
+    'bg-rose-600', 'bg-teal-600', 'bg-cyan-600', 'bg-fuchsia-600',
+    'bg-emerald-600', 'bg-indigo-600'
+];
 
 export const initialUsers: User[] = [
-  { id: 1, name: 'Alice (Admin)', email: 'alice@example.com', role: 'Admin', color: userColors[0], pin: '1111' },
-  { id: 2, name: 'Bob (Marketing)', email: 'bob@example.com', role: 'User', color: userColors[1], pin: '2222' },
-  { id: 3, name: 'Charlie (Sales)', email: 'charlie@example.com', role: 'User', color: userColors[2], pin: '3333' },
-  { id: 4, name: 'Diana (Engineering)', email: 'diana@example.com', role: 'User', color: userColors[3], pin: '4444' },
-  { id: 5, name: 'Eve (Viewer)', email: 'eve@example.com', role: 'Viewer', color: userColors[4], pin: '5555' },
+  { id: 1, name: 'Administrator', email: 'admin@example.com', role: 'Admin', color: userColors[0], pin: '1111' },
+  { id: 2, name: 'Douglas Road', email: 'douglas@example.com', role: 'User', color: userColors[1], pin: '2222' },
+  { id: 3, name: 'Park Lodge', email: 'parklodge@example.com', role: 'User', color: userColors[2], pin: '3333' },
+  { id: 4, name: 'Hanson Mews', email: 'hanson@example.com', role: 'User', color: userColors[3], pin: '4444' },
+  { id: 5, name: 'Riverside', email: 'riverside@example.com', role: 'User', color: userColors[4], pin: '5555' },
+  { id: 6, name: 'Avondale', email: 'avondale@example.com', role: 'User', color: userColors[5], pin: '6666' },
+  { id: 7, name: 'RI', email: 'ri@example.com', role: 'User', color: userColors[6], pin: '7777' },
+  { id: 8, name: 'Referral Team', email: 'referrals@example.com', role: 'User', color: userColors[7], pin: '8888' },
+  { id: 9, name: 'Psychologist', email: 'psych@example.com', role: 'User', color: userColors[8], pin: '9999' },
+  { id: 10, name: 'Viewer Account', email: 'viewer@example.com', role: 'Viewer', color: userColors[9], pin: '0000' },
 ];
 
 const tenDaysAgo = new Date();

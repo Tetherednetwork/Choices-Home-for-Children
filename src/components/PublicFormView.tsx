@@ -76,7 +76,7 @@ const PublicFormView: React.FC<PublicFormViewProps> = ({ form, allSections, allU
                         return (
                             <div key={section.id} className="border-t pt-8">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-2xl font-semibold text-slate-800">{section.title}</h2>
+                                    <h2 className="text-2xl font-semibold text-slate-800">{String(section.title)}</h2>
                                     <div className="flex items-center gap-3">
                                         <span className="text-sm text-slate-500 text-right">
                                             Assigned to: {String(assignedUser?.name || 'Unknown')}

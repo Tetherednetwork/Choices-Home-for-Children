@@ -450,7 +450,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, on
             return (
               <div key={section.id} className="border-t pt-8">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-semibold text-slate-800">{section.title}</h2>
+                    <h2 className="text-2xl font-semibold text-slate-800">{String(section.title)}</h2>
                     <div className="flex items-center gap-3">
                         {!isPreview && isSectionPending && isOverdue && (
                             <span className="text-xs font-semibold text-white bg-red-500 px-2 py-0.5 rounded-full">

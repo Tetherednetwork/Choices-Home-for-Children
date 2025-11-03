@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { User, Form, Section, Response, Notification, FormStatus, DashboardView } from '../types';
 import FormView from './FormView';
@@ -492,7 +493,7 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
       
       <main className="space-y-12">
         <div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">{viewTitles[view]}</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">{String(viewTitles[view])}</h2>
             
             {view === 'published' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
