@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Notification } from '../types';
 import { LogOutIcon, BellIcon, UsersIcon, ArchiveIcon, ChevronDownIcon, FileTextIcon, EditIcon, ClipboardCopyIcon, TrashIcon, PlusIcon, ChoicesLogoIcon } from './icons';

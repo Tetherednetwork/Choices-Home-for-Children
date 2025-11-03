@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Form, User } from '../types';
 import { ChevronLeftIcon, RotateCwIcon, TrashIcon, ArchiveIcon, FileIcon } from './icons';
@@ -43,8 +42,8 @@ const TrashView: React.FC<TrashViewProps> = ({ deletedForms, onRestore, onDelete
                                                 <FileIcon className="w-6 h-6 text-slate-500" />
                                             </div>
                                         </div>
-                                        <h3 className="text-xl font-semibold text-slate-800 truncate">{String(form.title)}</h3>
-                                        {creator && <p className="text-xs text-slate-500 mt-1">Created by: {String(creator.name)}</p>}
+                                        <h3 className="text-xl font-semibold text-slate-800 truncate">{form.title}</h3>
+                                        {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
                                         <p className="text-xs text-red-600 mt-1 font-medium">Status: In Trash</p>
                                     </div>
                                     

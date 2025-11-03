@@ -1,5 +1,5 @@
 {
-  "name": "Choices Internal Collaboration Form",
-  "description": "A multi-user form system where an admin assigns sections of a form to different users. Each user fills their assigned section, and the admin can view progress and download the completed form as a single PDF.",
+  "name": "My New Application",
+  "description": "A fresh start for a new web application.",
   "requestFramePermissions": []
 }

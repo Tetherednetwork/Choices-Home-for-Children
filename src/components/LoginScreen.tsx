@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import UserIcon from './UserIcon';
@@ -105,8 +104,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
               >
                 <UserIcon name={user.name} color={user.color} className="flex-shrink-0 h-10 w-10" />
                 <div className="ml-4">
-                  <p className="text-lg font-semibold text-slate-800">{String(user.name)}</p>
-                  <p className="text-sm text-slate-500">{String(user.role)}</p>
+                  <p className="text-lg font-semibold text-slate-800">{user.name}</p>
+                  <p className="text-sm text-slate-500">{user.role}</p>
                 </div>
               </button>
             ))}
@@ -125,7 +124,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
                     <button onClick={handleBack} className="absolute -top-4 -left-4 text-sm text-slate-600 hover:text-slate-900">&larr; Back to users</button>
                     <div className="flex flex-col items-center">
                         <UserIcon name={selectedUser.name} color={selectedUser.color} className="flex-shrink-0 h-20 w-20 mb-4" />
-                        <h2 className="text-2xl font-bold text-gray-900">{String(selectedUser.name)}</h2>
+                        <h2 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h2>
                         <p className="mt-1 text-md text-gray-600">
                         {showForgotPinMessage ? 'PIN Recovery' : 'Enter your PIN'}
                         </p>
@@ -201,26 +200,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin }) => {
             <p className="flex items-center gap-3"><DownloadIcon className="w-5 h-5 flex-shrink-0" /> PDF Export & Sharing</p>
           </div>
         </div>
-        
-        <style>{`
-            @keyframes shake {
-              10%, 90% { transform: translate3d(-1px, 0, 0); }
-              20%, 80% { transform: translate3d(2px, 0, 0); }
-              30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-              40%, 60% { transform: translate3d(4px, 0, 0); }
-            }
-            .animate-shake {
-              animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
-            }
-            @keyframes illuminate {
-              0%, 100% { background-color: #10b981; } /* emerald-600 */
-              33% { background-color: #3b82f6; } /* blue-500 */
-              66% { background-color: #f97316; } /* orange-500 */
-            }
-            .animate-illuminate {
-              animation: illuminate 15s infinite ease-in-out;
-            }
-        `}</style>
       </div>
     </div>
   );

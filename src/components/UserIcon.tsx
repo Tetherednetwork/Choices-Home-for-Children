@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UserSilhouetteIcon } from './icons';
 
@@ -10,7 +9,7 @@ interface UserIconProps {
 
 const UserIcon: React.FC<UserIconProps> = ({ name, color, className }) => {
   return (
-    <div title={String(name)} className={`flex items-center justify-center rounded-full ${color} ${className}`}>
+    <div title={name} className={`flex items-center justify-center rounded-full ${color} ${className}`}>
       <UserSilhouetteIcon className="w-3/5 h-3/5 text-white" />
     </div>
   );

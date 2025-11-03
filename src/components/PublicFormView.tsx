@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Form, Section, User, Question } from '../types';
 import { FileUpIcon } from './icons';
@@ -30,12 +29,12 @@ const SectionContent: React.FC<{ section: Section }> = ({ section }) => {
             {section.questions.map(q => (
                 <div key={q.id}>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                        {String(q.text)} {q.required && <span className="text-red-500">*</span>}
+                        {q.text} {q.required && <span className="text-red-500">*</span>}
                     </label>
                     {q.type === 'short-answer' && <div className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed min-h-[40px]"></div>}
                     {q.type === 'paragraph' && <div className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed min-h-[96px]"></div>}
-                    {q.type === 'multiple-choice' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="radio" disabled className="h-4 w-4" /><span className="ml-3 text-sm text-slate-700">{String(o)}</span></label>)}</div>}
-                    {q.type === 'checkboxes' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="checkbox" disabled className="h-4 w-4 rounded" /><span className="ml-3 text-sm text-slate-700">{String(o)}</span></label>)}</div>}
+                    {q.type === 'multiple-choice' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="radio" disabled className="h-4 w-4" /><span className="ml-3 text-sm text-slate-700">{o}</span></label>)}</div>}
+                    {q.type === 'checkboxes' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="checkbox" disabled className="h-4 w-4 rounded" /><span className="ml-3 text-sm text-slate-700">{o}</span></label>)}</div>}
                     {q.type === 'signature' && <div className="w-full h-32 border border-dashed border-slate-400 rounded-md bg-slate-50 flex items-center justify-center text-slate-500">Signature Area</div>}
                     {q.type === 'rating' && <StarRating value={0} />}
                     {q.type === 'date' && <div className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed min-h-[40px]"></div>}
@@ -63,7 +62,7 @@ const PublicFormView: React.FC<PublicFormViewProps> = ({ form, allSections, allU
         <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
             <div className="backdrop-blur-xl bg-white/50 p-8 sm:p-12 rounded-2xl shadow-2xl border border-white/60">
                 <div className="border-b pb-4 mb-8">
-                    <h1 className="text-4xl font-bold text-slate-900 text-center">{String(form.title)}</h1>
+                    <h1 className="text-4xl font-bold text-slate-900 text-center">{form.title}</h1>
                     {form.dueDate && (
                         <p className="mt-2 text-sm font-medium text-slate-500 text-center">
                             Due by: {new Date(form.dueDate).toLocaleDateString()}
@@ -76,10 +75,10 @@ const PublicFormView: React.FC<PublicFormViewProps> = ({ form, allSections, allU
                         return (
                             <div key={section.id} className="border-t pt-8">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-2xl font-semibold text-slate-800">{String(section.title)}</h2>
+                                    <h2 className="text-2xl font-semibold text-slate-800">{section.title}</h2>
                                     <div className="flex items-center gap-3">
                                         <span className="text-sm text-slate-500 text-right">
-                                            Assigned to: {String(assignedUser?.name || 'Unknown')}
+                                            Assigned to: {assignedUser?.name || 'Unknown'}
                                         </span>
                                         <UserIcon name={assignedUser?.name || ''} color={assignedUser?.color || 'bg-slate-400'} className="w-8 h-8" />
                                     </div>

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Notification } from '../types';
 import { BellIcon, XIcon } from './icons';
@@ -29,7 +28,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onD
                 <BellIcon className="w-5 h-5 text-sky-600" />
             </div>
             <div className="flex-grow">
-                <p className="text-sm font-medium text-slate-800">{String(notification.message)}</p>
+                <p className="text-sm font-medium text-slate-800">{notification.message}</p>
             </div>
             <div className="flex-shrink-0 ml-4">
                 <button
@@ -40,21 +39,6 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onD
                     <XIcon className="w-4 h-4" />
                 </button>
             </div>
-            <style>{`
-                @keyframes fade-in-right {
-                    from {
-                        opacity: 0;
-                        transform: translateX(100%);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-                .animate-fade-in-right {
-                    animation: fade-in-right 0.3s ease-out forwards;
-                }
-            `}</style>
         </div>
     );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { User, Form, Section, Response, Notification, DashboardView } from './types';
@@ -10,9 +9,15 @@ import PublicFormView from './components/PublicFormView';
 import Header from './components/Header';
 
 // --- Supabase Client Setup ---
-const supabaseUrl = 'https://uvgcvasoiqhmwblvpvcd.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2Z2N2YXNvaXFobXdibHZwdmNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDY5OTMsImV4cCI6MjA3Njg4Mjk5M30.13_FYJrdQ4h73PSGdvpRU1wA8EsLZRok2oX_Rnw874g';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Supabase URL and Anon Key are required. Please create a .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+}
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Note: For this to work, you must enable Row Level Security (RLS) on your tables in Supabase
+// and create policies that allow the 'anon' role to read and write data.
 
 const userColors = [
     'bg-sky-600', 'bg-lime-600', 'bg-amber-600', 'bg-violet-600', 
@@ -72,6 +77,7 @@ const App: React.FC = () => {
                 { data: responsesData },
             ] = results;
             
+            // Supabase client automatically maps snake_case (e.g., created_by) to camelCase (createdBy)
             setUsers(usersData || []);
             setForms(formsData || []);
             setSections(sectionsData || []);
@@ -212,6 +218,8 @@ const App: React.FC = () => {
 
   const handlePermanentlyDeleteForm = async (formId: number) => {
     if (window.confirm('Are you sure? This will permanently delete the form and all its data. This action cannot be undone.')) {
+      // Supabase cascade delete should handle sections and responses if set up correctly.
+      // Doing it manually to be safe.
       const sectionsToDelete = sections.filter(s => s.formId === formId).map(s => s.id);
       if (sectionsToDelete.length > 0) {
         const { error: responseError } = await supabase.from('responses').delete().in('sectionId', sectionsToDelete);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Question, QuestionType, Form, Section, Response } from '../types';
 import { PlusIcon, TrashIcon, GripVerticalIcon, LockIcon, EyeIcon, CopyIcon } from './icons';
@@ -260,7 +259,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                 id: q.tempId,
                 text: q.text,
                 type: q.type,
-                options: Array.isArray(q.options) ? q.options.filter(opt => String(opt).trim() !== '') : [],
+                options: Array.isArray(q.options) ? q.options.filter(opt => opt.trim() !== '') : [],
                 required: q.required
             }))
         }));
@@ -471,7 +470,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                                     className="mt-1 block w-full p-2 border border-slate-300 rounded-md shadow-sm bg-white disabled:bg-slate-100"
                                     disabled={section.isCompleted}
                                 >
-                                    {allUsers.map(user => <option key={user.id} value={user.id}>{String(user.name)}</option>)}
+                                    {allUsers.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -497,7 +496,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ allUsers, onSave, onCancel, f
                                                             <div key={optIndex} className="flex items-center gap-2">
                                                                 <input
                                                                     type="text"
-                                                                    value={opt || ''}
+                                                                    value={opt}
                                                                     onChange={e => updateOption(section.tempId, q.tempId, optIndex, e.target.value)}
                                                                     className="w-full text-sm p-1 border border-slate-300 rounded-md disabled:bg-slate-100"
                                                                     placeholder={`Option ${optIndex + 1}`}

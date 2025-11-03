@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { User, Form, Section, Response, Notification, FormStatus, DashboardView } from '../types';
 import FormView from './FormView';
@@ -69,7 +68,7 @@ const TemplateModal: React.FC<{
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {templates.map(template => (
                   <div key={template.id} className="p-3 border border-slate-200 bg-white/50 hover:border-sky-400 hover:shadow-md rounded-lg cursor-pointer transition-all" onClick={() => onSelectTemplate(template)}>
-                    <p className="font-semibold text-slate-700 truncate">{String(template.title).replace(/\[Template\]\s*/i, '')}</p>
+                    <p className="font-semibold text-slate-700 truncate">{template.title.replace(/\[Template\]\s*/i, '')}</p>
                     <p className="text-xs text-slate-500">Template</p>
                   </div>
                 ))}
@@ -101,7 +100,7 @@ const ShareModal: React.FC<{
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="backdrop-blur-xl bg-white/50 p-6 rounded-2xl shadow-2xl border border-white/60 w-full max-w-lg">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-semibold text-slate-800">Share Form: {String(data.formTitle)}</h3>
+                    <h3 className="text-xl font-semibold text-slate-800">Share Form: {data.formTitle}</h3>
                     <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200"><XIcon className="w-5 h-5"/></button>
                 </div>
                 <div>
@@ -291,7 +290,7 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
 
   const filteredBaseForms = useMemo(() => {
     return forms.filter(form => {
-        if (searchQuery && !String(form.title).toLowerCase().includes(searchQuery.toLowerCase())) {
+        if (searchQuery && !form.title.toLowerCase().includes(searchQuery.toLowerCase())) {
             return false;
         }
 
@@ -336,7 +335,7 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
   };
 
   const handleStartFromTemplate = (template: Form) => {
-    setEditingForm({ ...template, id: undefined, title: String(template.title).replace(/\[Template\]\s*/i, '') });
+    setEditingForm({ ...template, id: undefined, title: template.title.replace(/\[Template\]\s*/i, '') });
     setIsTemplateModalOpen(false);
     setView('formBuilder');
   };
@@ -446,7 +445,7 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
       />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Welcome, {String(currentUser.name).split(' ')[0]}</h1>
+            <h1 className="text-3xl font-bold text-slate-900">Welcome, {currentUser.name.split(' ')[0]}</h1>
             <p className="text-slate-600 mt-1">Here are the forms available to you.</p>
           </div>
       </div>
@@ -471,7 +470,7 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
                     aria-label="Filter by creator"
                 >
                     <option value="all">All Creators</option>
-                    {uniqueCreators.map(user => <option key={user.id} value={user.id}>{String(user.name)}</option>)}
+                    {uniqueCreators.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
                 </select>
             )}
             {view === 'published' && (
@@ -493,7 +492,7 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
       
       <main className="space-y-12">
         <div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">{String(viewTitles[view])}</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">{viewTitles[view]}</h2>
             
             {view === 'published' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -582,11 +581,11 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
                                       <FileIcon className="w-6 h-6 text-sky-700" />
                                   </div>
                                   <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusIndicator.color}`}>
-                                      {String(statusIndicator.text)}
+                                      {statusIndicator.text}
                                   </span>
                               </div>
-                              <h3 className="text-xl font-semibold text-slate-800 truncate">{String(form.title)}</h3>
-                              {creator && <p className="text-xs text-slate-500 mt-1">Created by: {String(creator.name)}</p>}
+                              <h3 className="text-xl font-semibold text-slate-800 truncate">{form.title}</h3>
+                              {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
                               {form.dueDate && (
                                   <p className={`text-xs font-medium mt-2 ${status === 'overdue' ? 'text-red-600' : 'text-slate-500'}`}>
                                       Due: {new Date(form.dueDate).toLocaleDateString()}
@@ -622,8 +621,8 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
                                       </div>
                                       <span className="text-xs font-semibold text-amber-800 bg-amber-200 px-2 py-1 rounded-full">DRAFT</span>
                                   </div>
-                                  <h3 className="text-xl font-semibold text-slate-800 truncate">{String(form.title)}</h3>
-                                  {creator && <p className="text-xs text-slate-500 mt-1">Created by: {String(creator.name)}</p>}
+                                  <h3 className="text-xl font-semibold text-slate-800 truncate">{form.title}</h3>
+                                  {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
                               </div>
                               <div className="mt-6 flex justify-end gap-2 border-t pt-4">
                                   <button onClick={() => onDeleteForm(form.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Move to Trash"><TrashIcon className="w-5 h-5"/></button>
@@ -653,8 +652,8 @@ const Dashboard = forwardRef<DashboardHandle, DashboardProps>(({
                                       </div>
                                       <span className="text-xs font-semibold text-lime-800 bg-lime-200 px-2 py-1 rounded-full">TEMPLATE</span>
                                   </div>
-                                  <h3 className="text-xl font-semibold text-slate-800 truncate">{String(template.title).replace(/\[Template\]\s*/i, '')}</h3>
-                                  {creator && <p className="text-xs text-slate-500 mt-1">Created by: {String(creator.name)}</p>}
+                                  <h3 className="text-xl font-semibold text-slate-800 truncate">{template.title.replace(/\[Template\]\s*/i, '')}</h3>
+                                  {creator && <p className="text-xs text-slate-500 mt-1">Created by: {creator.name}</p>}
                               </div>
                               <div className="mt-6 flex justify-end gap-2 border-t pt-4">
                                   <button onClick={() => onDeleteForm(template.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Move to Trash"><TrashIcon className="w-5 h-5"/></button>

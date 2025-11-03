@@ -8,7 +8,7 @@ interface HeaderProps {
     currentUser: User | null;
     notifications: Notification[];
     onLogout: () => void;
-    onNavigate: (view: DashboardView) => void;
+    onNavigate: (view: DashboardView) => void;\
     onNewFormClick: () => void;
 }
 

@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Form, Section, Response, User, Question } from '../types';
 import jsPDF from 'jspdf';
@@ -114,12 +113,12 @@ const SectionContent: React.FC<{
             {section.questions.map(q => (
                 <div key={q.id}>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                        {String(q.text)} {q.required && <span className="text-red-500">*</span>}
+                        {q.text} {q.required && <span className="text-red-500">*</span>}
                     </label>
                     {q.type === 'short-answer' && <input type="text" disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" />}
                     {q.type === 'paragraph' && <textarea rows={4} disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" />}
-                    {q.type === 'multiple-choice' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="radio" disabled className="h-4 w-4" /><span className="ml-3 text-sm text-slate-700">{String(o)}</span></label>)}</div>}
-                    {q.type === 'checkboxes' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="checkbox" disabled className="h-4 w-4 rounded" /><span className="ml-3 text-sm text-slate-700">{String(o)}</span></label>)}</div>}
+                    {q.type === 'multiple-choice' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="radio" disabled className="h-4 w-4" /><span className="ml-3 text-sm text-slate-700">{o}</span></label>)}</div>}
+                    {q.type === 'checkboxes' && Array.isArray(q.options) && <div className="space-y-2">{q.options.map((o, i) => <label key={i} className="flex items-center"><input type="checkbox" disabled className="h-4 w-4 rounded" /><span className="ml-3 text-sm text-slate-700">{o}</span></label>)}</div>}
                     {q.type === 'signature' && <div className="w-full h-32 border border-dashed border-slate-400 rounded-md bg-slate-50 flex items-center justify-center text-slate-500">Signature Area</div>}
                     {q.type === 'rating' && <StarRating value={0} onChange={() => {}} disabled={true} />}
                     {q.type === 'date' && <input type="date" disabled className="w-full p-2 border border-slate-300 rounded-md bg-slate-100 cursor-not-allowed" />}
@@ -141,7 +140,7 @@ const SectionContent: React.FC<{
             const answer = response?.content[q.id];
             return (
               <div key={q.id}>
-                <label className="block text-sm font-medium text-slate-700">{String(q.text)}</label>
+                <label className="block text-sm font-medium text-slate-700">{q.text}</label>
                 <div className="mt-1 p-3 bg-slate-100 rounded-md text-sm text-slate-800 min-h-[40px] prose prose-sm max-w-none break-words">
                   {(() => {
                     if (answer === null || answer === undefined || (typeof answer === 'string' && answer.trim() === '')) {
@@ -186,7 +185,7 @@ const SectionContent: React.FC<{
         <div className="flex flex-col items-center justify-center p-8 bg-amber-50 border-2 border-dashed border-amber-200 rounded-lg text-center">
           <ClockIcon className="w-12 h-12 text-amber-500 mb-3"/>
           <h3 className="text-lg font-semibold text-amber-800">Pending Submission</h3>
-          <p className="text-sm text-amber-700">Awaiting completion from {String(assignedUser?.name)}.</p>
+          <p className="text-sm text-amber-700">Awaiting completion from {assignedUser?.name}.</p>
         </div>
       );
     }
@@ -197,13 +196,13 @@ const SectionContent: React.FC<{
       {section.questions.map(q => (
         <div key={q.id}>
           <label htmlFor={q.id} className="block text-sm font-medium text-slate-700 mb-2">
-            {String(q.text)} {q.required && <span className="text-red-500">*</span>}
+            {q.text} {q.required && <span className="text-red-500">*</span>}
           </label>
           {q.type === 'short-answer' && (
             <input
               type="text"
               id={q.id}
-              value={String(answers[q.id] || '')}
+              value={answers[q.id] || ''}
               onChange={e => handleInputChange(q.id, e.target.value)}
               className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
             />
@@ -212,7 +211,7 @@ const SectionContent: React.FC<{
             <textarea
               id={q.id}
               rows={4}
-              value={String(answers[q.id] || '')}
+              value={answers[q.id] || ''}
               onChange={e => handleInputChange(q.id, e.target.value)}
               className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
             />
@@ -224,12 +223,12 @@ const SectionContent: React.FC<{
                   <input
                     type="radio"
                     name={q.id}
-                    value={String(option)}
-                    checked={String(answers[q.id]) === String(option)}
+                    value={option}
+                    checked={answers[q.id] === option}
                     onChange={e => handleInputChange(q.id, e.target.value)}
                     className="h-4 w-4 text-sky-700 border-slate-300 focus:ring-sky-500"
                   />
-                  <span className="ml-3 text-sm text-slate-700">{String(option)}</span>
+                  <span className="ml-3 text-sm text-slate-700">{option}</span>
                 </label>
               ))}
             </div>
@@ -241,12 +240,12 @@ const SectionContent: React.FC<{
                   <input
                     type="checkbox"
                     name={q.id}
-                    value={String(option)}
-                    checked={Array.isArray(answers[q.id]) ? (answers[q.id] as any[]).map(String).includes(String(option)) : false}
-                    onChange={e => handleCheckboxChange(q.id, String(option), e.target.checked)}
+                    value={option}
+                    checked={Array.isArray(answers[q.id]) ? (answers[q.id] as any[]).map(String).includes(option) : false}
+                    onChange={e => handleCheckboxChange(q.id, option, e.target.checked)}
                     className="h-4 w-4 text-sky-700 border-slate-300 rounded focus:ring-sky-500"
                   />
-                  <span className="ml-3 text-sm text-slate-700">{String(option)}</span>
+                  <span className="ml-3 text-sm text-slate-700">{option}</span>
                 </label>
               ))}
             </div>
@@ -267,7 +266,7 @@ const SectionContent: React.FC<{
               <input
                   type="date"
                   id={q.id}
-                  value={String(answers[q.id] || '')}
+                  value={answers[q.id] || ''}
                   onChange={e => handleInputChange(q.id, e.target.value)}
                   className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
               />
@@ -276,7 +275,7 @@ const SectionContent: React.FC<{
               <input
                   type="tel"
                   id={q.id}
-                  value={String(answers[q.id] || '')}
+                  value={answers[q.id] || ''}
                   onChange={e => handleInputChange(q.id, e.target.value)}
                   placeholder="e.g., 07123 456789"
                   className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
@@ -286,7 +285,7 @@ const SectionContent: React.FC<{
               <input
                   type="email"
                   id={q.id}
-                  value={String(answers[q.id] || '')}
+                  value={answers[q.id] || ''}
                   onChange={e => handleInputChange(q.id, e.target.value)}
                   placeholder="e.g., name@example.com"
                   className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
@@ -296,7 +295,7 @@ const SectionContent: React.FC<{
             <input
                 type="url"
                 id={q.id}
-                value={String(answers[q.id] || '')}
+                value={answers[q.id] || ''}
                 onChange={e => handleInputChange(q.id, e.target.value)}
                 placeholder="https://example.com"
                 className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500"
@@ -432,7 +431,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, on
 
       <div ref={formRef} className="backdrop-blur-xl bg-white/50 p-8 sm:p-12 rounded-2xl shadow-2xl border border-white/60">
         <div className="border-b pb-4 mb-8">
-            <h1 className="text-4xl font-bold text-slate-900">{String(form.title)}</h1>
+            <h1 className="text-4xl font-bold text-slate-900">{form.title}</h1>
             {isPreview && <p className="mt-2 text-sm font-semibold text-sky-700 bg-sky-100 px-3 py-1 rounded-full inline-block">PREVIEW MODE</p>}
             {form.dueDate && !isPreview && (
                 <p className={`mt-2 text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-slate-500'}`}>
@@ -450,7 +449,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, on
             return (
               <div key={section.id} className="border-t pt-8">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-semibold text-slate-800">{String(section.title)}</h2>
+                    <h2 className="text-2xl font-semibold text-slate-800">{section.title}</h2>
                     <div className="flex items-center gap-3">
                         {!isPreview && isSectionPending && isOverdue && (
                             <span className="text-xs font-semibold text-white bg-red-500 px-2 py-0.5 rounded-full">
@@ -458,7 +457,7 @@ const FormView: React.FC<FormViewProps> = ({ form, allSections, allResponses, on
                             </span>
                         )}
                         <span className="text-sm text-slate-500 text-right">
-                          Assigned to: {String(assignedUser?.name || 'Unknown')}
+                          Assigned to: {assignedUser?.name || 'Unknown'}
                         </span>
                         <UserIcon name={assignedUser?.name || ''} color={assignedUser?.color || 'bg-slate-400'} className="w-8 h-8" />
                         
